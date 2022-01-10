@@ -1,4 +1,4 @@
-@syms a b c
+a, b, c = :a, :b, :c
 
 @testset "Equality" begin
     @eqtest a == a
@@ -88,7 +88,7 @@ end
     ret = @slots z @capture term(+, a, b) (+)(z...)
     @test ret
     @test @isdefined z
-    @test all(z .=== arguments(a + b))
+    @test all(z .=== arguments(term(+, a, b)))
 
     #a more typical way to use the @capture macro
 
