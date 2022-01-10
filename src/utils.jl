@@ -71,66 +71,12 @@ end
 @inline drop_n(ll::Union{Tuple, AbstractArray}, n) = drop_n(LL(ll, 1), n)
 @inline drop_n(ll::LL, n) = LL(ll.v, ll.i+n)
 
-pow(x,y) = y==0 ? 1 : y<0 ? inv(x)^(-y) : x^y
-pow(x::Symbolic,y) = y==0 ? 1 : Base.:^(x,y)
-pow(x, y::Symbolic) = Base.:^(x,y)
-pow(x::Symbolic,y::Symbolic) = Base.:^(x,y)
-
-# Simplification utilities
-function has_trig(term)
-    !istree(term) && return false
-    fns = (sin, cos, tan, cot, sec, csc)
-    op = operation(term)
-
-    if Base.@nany 6 i->fns[i] === op
-        return true
-    else
-        return any(has_trig, arguments(term))
-    end
-end
-
-function fold(t)
-    if istree(t)
-        tt = map(fold, arguments(t))
-        if !any(x->x isa Symbolic, tt)
-            # evaluate it
-            return operation(t)(tt...)
-        else
-            return similarterm(t, operation(t), tt)
-        end
-    else
-        return t
-    end
-end
-
 ### Predicates
 
 sym_isa(::Type{T}) where {T} = @nospecialize(x) -> x isa T || symtype(x) <: T
 
 isliteral(::Type{T}) where {T} = x -> x isa T
 is_literal_number(x) = isliteral(Number)(x)
-
-# checking the type directly is faster than dynamic dispatch in type unstable code
-_iszero(x) = x isa Number && iszero(x)
-_isone(x) = x isa Number && isone(x)
-_isinteger(x) = (x isa Number && isinteger(x)) || (x isa Symbolic && symtype(x) <: Integer)
-_isreal(x) = (x isa Number && isreal(x)) || (x isa Symbolic && symtype(x) <: Real)
-
-issortedₑ(args) = issorted(args, lt=<ₑ)
-needs_sorting(f) = x -> is_operation(f)(x) && !issortedₑ(arguments(x))
-
-# are there nested ⋆ terms?
-function isnotflat(⋆)
-    function (x)
-        args = arguments(x)
-        for t in args
-            if istree(t) && operation(t) === (⋆)
-                return true
-            end
-        end
-        return false
-    end
-end
 
 function hasrepeats(x)
     length(x) <= 1 && return false

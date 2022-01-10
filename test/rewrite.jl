@@ -3,9 +3,9 @@
 @testset "Equality" begin
     @eqtest a == a
     @eqtest a != b
-    @eqtest a*b == a*b
-    @eqtest a*b != a
-    @eqtest a != a*b
+    @eqtest term(*, a, b) == term(*, a, b)
+    @eqtest term(*, a, b) != a
+    @eqtest a != term(*, a, b)
 end
 
 @testset "Literal Matcher" begin
@@ -25,37 +25,37 @@ end
 
 @testset "Term matcher" begin
     @slots x begin
-        @test @rule(sin(x) => x)(sin(a)) === a
-        @eqtest @rule(sin(x) => x)(sin(a^2)) == a^2
-        @test @rule(sin(x) => x)(sin(a)^2) === nothing
-        @test @rule(sin(sin(x)) => x)(sin(a^2)) === nothing
+        @test @rule(sin(x) => x)(term(sin, a)) === a
+        @eqtest @rule(sin(x) => x)(term(sin, term(^, a, 2))) == term(^, a, 2)
+        @test @rule(sin(x) => x)(term(^, term(sin, a), 2)) === nothing
+        @test @rule(sin(sin(x)) => x)(term(sin, term(^, a, 2))) === nothing
     end
-    @test @slots x @rule(sin(sin(x)) => x)(sin(sin(a))) === a
-    @test @slots x @rule(sin(x)^2 => x)(sin(a)^2) === a
+    @test @slots x @rule(sin(sin(x)) => x)(term(sin, term(sin, a))) === a
+    @test @slots x @rule(sin(x)^2 => x)(term(^, term(sin, a), 2)) === a
 
-    @test @rule(sin(~x) => ~x)(sin(a)) === a
-    @eqtest @rule(sin(~x) => ~x)(sin(a^2)) == a^2
-    @test @rule(sin(~x) => ~x)(sin(a)^2) === nothing
-    @test @rule(sin(sin(~x)) => ~x)(sin(a^2)) === nothing
-    @test @rule(sin(sin(~x)) => ~x)(sin(sin(a))) === a
-    @test @rule(sin(~x)^2 => ~x)(sin(a)^2) === a
+    @test @rule(sin(~x) => ~x)(term(sin, a)) === a
+    @eqtest @rule(sin(~x) => ~x)(term(sin, term(^, a, 2))) == term(^, a, 2)
+    @test @rule(sin(~x) => ~x)(term(^, term(sin, a), 2)) === nothing
+    @test @rule(sin(sin(~x)) => ~x)(term(sin, term(^, a, 2))) === nothing
+    @test @rule(sin(sin(~x)) => ~x)(term(sin, term(sin, a))) === a
+    @test @rule(sin(~x)^2 => ~x)(term(^, term(sin, a), 2)) === a
 end
 
 @testset "Equality matching" begin
-    @test @rule((~x)^(~x) => ~x)(a^a) === a
-    @test @rule((~x)^(~x) => ~x)(b^a) === nothing
-    @test @rule((~x)^(~x) => ~x)(a+a) === nothing
-    @eqtest @rule((~x)^(~x) => ~x)(sin(a)^sin(a)) == sin(a)
-    @eqtest @rule((~x*~y + ~x*~z)  => ~x * (~y+~z))(a*b + a*c) == a*(b+c)
+    @test @rule((~x)^(~x) => ~x)(term(^, a, a)) === a
+    @test @rule((~x)^(~x) => ~x)(term(^, b, a)) === nothing
+    @test @rule((~x)^(~x) => ~x)(term(+, a, a)) === nothing
+    @eqtest @rule((~x)^(~x) => ~x)(term(^, term(sin, a), term(sin, a))) == term(sin, a)
+    @eqtest @rule((~x*~y + ~x*~z)  => term(*, ~x, term(+, ~y, ~z)))(term(+, term(*, a, b), term(*, a, c))) == term(*, a, term(+, b, c))
 
-    @eqtest @rule(+(~~x) => ~~x)(a + b) == [a,b]
+    @eqtest @rule(+(~~x) => ~~x)(term(+, a, b)) == [a,b]
     @eqtest @rule(+(~~x) => ~~x)(term(+, a, b, c)) == [a,b,c]
     @eqtest @rule(+(~~x,~y, ~~x) => (~~x, ~y))(term(+,9,8,9,type=Any)) == ([9,],8)
     @eqtest @rule(+(~~x,~y, ~~x) => (~~x, ~y, ~~x))(term(+,9,8,9,9,8,type=Any)) == ([9,8], 9, [9,8])
     @eqtest @rule(+(~~x,~y,~~x) => (~~x, ~y, ~~x))(term(+,6,type=Any)) == ([], 6, [])
 
     @slots x y begin
-        @eqtest @rule(+(x...) => x)(a + b) == [a,b]
+        @eqtest @rule(+(x...) => x)(term(+, a, b)) == [a,b]
         @eqtest @rule(+(x...) => x)(term(+, a, b, c)) == [a,b,c]
         @eqtest @rule(+(x..., y, x...) => (x, y))(term(+,9,8,9,type=Any)) == ([9,],8)
     end
@@ -70,7 +70,7 @@ end
 end
 
 @testset "Capture form" begin
-    ex = a^a
+    ex = term(^, a, a)
 
     #note that @test inserts a soft local scope (try-catch) that would gobble
     #the matches from assignment statements in @capture macro, so we call it
@@ -80,12 +80,12 @@ end
     @test @isdefined x
     @test x === a
 
-    ex = b^a
+    ex = term(^, b, a)
     ret = @capture ex (~y)^(~y)
     @test !ret
     @test !(@isdefined y)
 
-    ret = @slots z @capture (a + b) (+)(z...)
+    ret = @slots z @capture term(+, a, b) (+)(z...)
     @test ret
     @test @isdefined z
     @test all(z .=== arguments(a + b))
@@ -96,6 +96,6 @@ end
         w
     end
 
-    @eqtest f(b^b) == b
-    @test f(b+b) == nothing
+    @eqtest f(term(^, b, b)) == b
+    @test f(term(+, b, b)) == nothing
 end

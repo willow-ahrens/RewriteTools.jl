@@ -25,12 +25,5 @@ if haskey(ENV, "SU_BENCHMARK_ONLY")
     include("benchmark.jl")
 else
     include("basics.jl")
-    include("order.jl")
-    include("polyform.jl")
     include("rewrite.jl")
-    include("rulesets.jl")
-    include("code.jl")
-    include("interface.jl")
-    include("fuzz.jl")
-    include("adjoints.jl")
 end
