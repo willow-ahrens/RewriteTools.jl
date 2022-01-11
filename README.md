@@ -2,7 +2,7 @@
 
 [![Stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://peterahrens.github.io/RewriteTools.jl/stable)
 [![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://peterahrens.github.io/RewriteTools.jl/dev)
-[![Build Status](https://github.com/peterahrens/RewriteTools.jl/actions/workflows/CI.yml/badge.svg?branch=master)](https://github.com/peterahrens/RewriteTools.jl/actions/workflows/CI.yml?query=branch%3Amaster)
+[![Build Status](https://github.com/peterahrens/RewriteTools.jl/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/peterahrens/RewriteTools.jl/actions/workflows/ci.yml?query=branch%3Amaster)
 [![Coverage](https://codecov.io/gh/peterahrens/RewriteTools.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/peterahrens/RewriteTools.jl)
 SymbolicUtils.jl provides various utilities for symbolic computing. SymbolicUtils.jl is what one would use to build
 a Computer Algebra System (CAS). If you're looking for a complete CAS, similar to SymPy or Mathematica, see
