@@ -3,7 +3,6 @@ module RewriteTools
 export @syms, term, showraw, hasmetadata, getmetadata, setmetadata
 
 using TermInterface
-using DataStructures
 import Base: +, -, *, /, //, \, ^, ImmutableDict
 include("types.jl")
 export istree, operation, arguments, similarterm
@@ -14,7 +13,6 @@ include("utils.jl")
 # A library for composing expr -> expr functions
 include("rewriters.jl")
 
-using Combinatorics: permutations, combinations
 export @rule, RuleSet, @capture, @slots
 
 # Rule type and @rule macro

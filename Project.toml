@@ -3,9 +3,11 @@ uuid = "5969e224-3634-4c61-9f66-721b69e98b8a"
 authors = ["Peter Ahrens", "Shashi Gowda"]
 version = "0.1.0"
 
+[deps]
 AbstractTrees = "1520ce14-60c1-5f80-bbc7-55ef81b5835c"
 TermInterface = "8ea1fca8-c5ef-4a55-8b96-4e9afe9c9a3c"
 TimerOutputs = "a759f4b9-e2f1-59dc-863e-4aeb61b1ea8f"
+Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
 
 [extras]
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
@@ -20,4 +22,4 @@ Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 julia = "1.1"
 
 [targets]
-test = ["Test"]
+test = ["Test", "Pkg"]

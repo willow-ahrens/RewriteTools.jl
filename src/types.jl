@@ -39,12 +39,7 @@ end
 hashvec(xs, z) = foldr(hash, xs, init=z)
 
 function Base.hash(t::Term, salt::UInt)
-    !iszero(salt) && return hash(hash(t, zero(UInt)), salt)
-    h = t.hash[]
-    !iszero(h) && return h
-    h′ = hashvec(arguments(t), hash(operation(t), salt))
-    t.hash[] = h′
-    return h′
+    hashvec(arguments(t), hash(operation(t), salt))
 end
 
 function term(f, args...; type = nothing)

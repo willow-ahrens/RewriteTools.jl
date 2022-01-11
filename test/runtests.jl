@@ -2,7 +2,6 @@ using Documenter
 using Pkg
 using Test
 using RewriteTools
-import IfElse: ifelse
 
 DocMeta.setdocmeta!(
     RewriteTools,
