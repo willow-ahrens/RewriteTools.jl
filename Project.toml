@@ -5,21 +5,20 @@ version = "0.1.0"
 
 [deps]
 AbstractTrees = "1520ce14-60c1-5f80-bbc7-55ef81b5835c"
-TermInterface = "8ea1fca8-c5ef-4a55-8b96-4e9afe9c9a3c"
-TimerOutputs = "a759f4b9-e2f1-59dc-863e-4aeb61b1ea8f"
 Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
+SyntaxInterface = "b33eeca9-aacb-4496-a840-e75f1646a4fb"
+TimerOutputs = "a759f4b9-e2f1-59dc-863e-4aeb61b1ea8f"
+
+[compat]
+julia = "1.1"
 
 [extras]
-Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 BenchmarkTools = "6e4b80f9-dd63-53aa-95a3-0cdb28fa8baf"
 Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
 Pkg = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
 PkgBenchmark = "32113eaa-f34f-5b0d-bd6c-c81e245fc73d"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
-
-
-[compat]
-julia = "1.1"
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
 test = ["Test", "Pkg"]

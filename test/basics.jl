@@ -1,4 +1,4 @@
-using RewriteTools: Term, symtype, operation, arguments
+using RewriteTools: Term, operation, arguments
 using RewriteTools
 using Test
 

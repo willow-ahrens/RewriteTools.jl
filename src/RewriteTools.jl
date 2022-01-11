@@ -2,7 +2,7 @@ module RewriteTools
 
 export @syms, term, showraw, hasmetadata, getmetadata, setmetadata
 
-using TermInterface
+using SyntaxInterface
 import Base: +, -, *, /, //, \, ^, ImmutableDict
 include("types.jl")
 export istree, operation, arguments, similarterm

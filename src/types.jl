@@ -15,17 +15,16 @@ struct Term
     arguments::Any
 end
 
-TermInterface.istree(t::Type{Term}) = true
+SyntaxInterface.istree(t::Term) = true
 
-TermInterface.operation(x::Term) = x.f
+SyntaxInterface.operation(x::Term) = x.f
 
-TermInterface.arguments(x::Term) = x.arguments
+SyntaxInterface.arguments(x::Term) = x.arguments
 
 Base.isequal(::Term, x) = false
 Base.isequal(x, ::Term) = false
 function Base.isequal(t1::Term, t2::Term)
     t1 === t2 && return true
-    symtype(t1) !== symtype(t2) && return false
 
     a1 = arguments(t1)
     a2 = arguments(t2)
@@ -59,10 +58,8 @@ different type than `t`, because `f` also influences the result.
 - `t` the reference term to use to create similar terms
 - `f` is the operation of the term
 - `args` is the arguments
-- The `symtype` of the resulting term. Best effort will be made to set the symtype of the
-  resulting similar term to this type.
 """
-TermInterface.similarterm(t::Type{Term}, f, args, symtype; metadata=nothing) = 
+SyntaxInterface.similarterm(t::Term, f, args) = 
     Term(f, args)
 
 #--------------------
@@ -82,11 +79,7 @@ function show_call(io, f, args)
             print_arg(io, t, paren=true)
         end
     else
-        if f isa Sym
-            Base.show_unquoted(io, nameof(f))
-        else
-            Base.show(io, f)
-        end
+        Base.show(io, f)
         print(io, "(")
         for i=1:length(args)
             print(io, args[i])
