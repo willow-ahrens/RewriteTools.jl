@@ -98,4 +98,8 @@ end
 
     @eqtest f(term(^, b, b)) == b
     @test f(term(+, b, b)) == nothing
+
+    x = 1
+    r = (@capture x x)
+    @test r == true
 end

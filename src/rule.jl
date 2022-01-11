@@ -120,7 +120,7 @@ abstract type AbstractRule end # Currently doesn't really do anything. Can be re
 #### Regular Rewriting Rules
 
 struct Rule{L, M, R} <: AbstractRule
-    expr::Expr               # rule pattern stored for pretty printing
+    expr                     # rule pattern stored for pretty printing
     lhs::L                   # the pattern
     matcher::M               # matcher(lhs)
     rhs::R                   # consequent
