@@ -1,6 +1,5 @@
-module SymbolicUtils
+module RewriteTools
 
-using DocStringExtensions
 export @syms, term, showraw, hasmetadata, getmetadata, setmetadata
 
 using TermInterface
