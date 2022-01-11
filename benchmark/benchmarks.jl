@@ -1,5 +1,5 @@
-using BenchmarkTools, SymbolicUtils
-using SymbolicUtils: is_literal_number
+using BenchmarkTools, RewriteTools
+using RewriteTools: is_literal_number
 
 using Random
 
@@ -68,20 +68,4 @@ let r = @rule(~x => ~x), rs = RuleSet([r]),
     end
 
 
-end
-
-let
-    pform = SUITE["polyform"]  = BenchmarkGroup()
-    @syms a b c d e f g h i
-    ex = (f + ((((g*(c^2)*(e^2)) / d - e*h*(c^2)) / b + (-c*e*f*g) / d + c*e*i) /
-              (i + ((c*e*g) / d - c*h) / b + (-f*g) / d) - c*e) / b +
-         ((g*(f^2)) / d + ((-c*e*f*g) / d + c*f*h) / b - f*i) /
-         (i + ((c*e*g) / d - c*h) / b + (-f*g) / d)) / d
-
-    o = (d + (e*((c*(g + (-d*g) / d)) / (i + (-c*(h + (-e*g) / d)) / b + (-f*g) / d))) / b +
-         (-f*(g + (-d*g) / d)) / (i + (-c*(h + (-e*g) / d)) / b + (-f*g) / d)) / d
-    pform["simplify_fractions"] = @benchmarkable simplify_fractions($ex)
-    pform["iszero"] = @benchmarkable SymbolicUtils.fraction_iszero($ex)
-    pform["isone"] = @benchmarkable SymbolicUtils.fraction_isone($o)
-    pform["easy_iszero"] = @benchmarkable SymbolicUtils.fraction_iszero($((b*(h + (-e*g) / d)) / b + (e*g) / d - h))
 end

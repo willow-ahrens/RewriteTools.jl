@@ -47,10 +47,10 @@ function term(f, args...; type = nothing)
 end
 
 """
-    similarterm(t, f, args, symtype; metadata=nothing)
+    similarterm(t, f, args)
 
 Create a term that is similar in type to `t`. Extending this function allows packages
-using their own expression types with SymbolicUtils to define how new terms should
+using their own expression types with RewriteToolsto define how new terms should
 be created. Note that `similarterm` may return an object that has a
 different type than `t`, because `f` also influences the result.
 
