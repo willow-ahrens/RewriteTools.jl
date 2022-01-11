@@ -1,16 +1,9 @@
-<h1 align="center"><a href="https://juliasymbolics.github.io/SymbolicUtils.jl/">SymbolicUtils.jl</a></h1>
+# RewriteTools
 
-<p align="center">
-  <a href="https://github.com/JuliaSymbolics/SymbolicUtils.jl/actions">
-    <img src="https://github.com/JuliaSymbolics/SymbolicUtils.jl/workflows/CI/badge.svg"
-         alt="CI">
-  </a>
-  </a>
-  <a href="https://codecov.io/gh/JuliaSymbolics/SymbolicUtils.jl">
-    <img src="https://codecov.io/gh/JuliaSymbolics/SymbolicUtils.jl/branch/master/graph/badge.svg?token=UL72EBCQRW"/>
-  </a>
-</p>
-
+[![Stable](https://img.shields.io/badge/docs-stable-blue.svg)](https://peterahrens.github.io/RewriteTools.jl/stable)
+[![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://peterahrens.github.io/RewriteTools.jl/dev)
+[![Build Status](https://github.com/peterahrens/RewriteTools.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/peterahrens/RewriteTools.jl/actions/workflows/CI.yml?query=branch%3Amain)
+[![Coverage](https://codecov.io/gh/peterahrens/RewriteTools.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/peterahrens/RewriteTools.jl)
 SymbolicUtils.jl provides various utilities for symbolic computing. SymbolicUtils.jl is what one would use to build
 a Computer Algebra System (CAS). If you're looking for a complete CAS, similar to SymPy or Mathematica, see
 [Symbolics.jl](https://github.com/JuliaSymbolics/Symbolics.jl). If you want to build a crazy CAS for your weird

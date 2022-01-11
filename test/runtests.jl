@@ -1,27 +1,26 @@
 using Documenter
 using Pkg
 using Test
-using SymbolicUtils
+using RewriteTools
 import IfElse: ifelse
 
 DocMeta.setdocmeta!(
-    SymbolicUtils,
+    RewriteTools,
     :DocTestSetup,
-    :(using SymbolicUtils);
+    :(using RewriteTools);
     recursive=true
 )
 
 # Only test one Julia version to avoid differences due to changes in printing.
 if v"1.6" ≤ VERSION < v"1.7-beta3.0"
-    doctest(SymbolicUtils)
+    doctest(RewriteTools)
 else
     @warn "Skipping doctests"
 end
-SymbolicUtils.show_simplified[] = false
 
 include("utils.jl")
 
-if haskey(ENV, "SU_BENCHMARK_ONLY")
+if haskey(ENV, "REWRITETOOLS_BENCHMARK_ONLY")
     include("benchmark.jl")
 else
     include("basics.jl")
