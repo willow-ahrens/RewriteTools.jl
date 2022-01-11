@@ -15,12 +15,6 @@ struct Term
     arguments::Any
 end
 
-function ConstructionBase.constructorof(s::Type{Term})
-    function (f, args, meta, hash)
-        Term{T, typeof(meta)}(f, args, meta, hash)
-    end
-end
-
 TermInterface.istree(t::Type{Term}) = true
 
 TermInterface.operation(x::Term) = x.f
