@@ -119,10 +119,11 @@ Return a flattened expression with the numbers at the back.
 
 # Example
 ```jldoctest
-julia> @syms x y;
+julia> ex = RewriteUtils.flatten_term(+, term(+, :a, term(+, :b, :c)))
+:a + :b + :c
 
-julia> RewriteUtils.flatten_term(+, y + y + x)
-x + 2y
+julia> ex == term(+, :a, :b, :c)
+true
 ```
 """
 function flatten_term(⋆, x)
