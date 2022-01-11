@@ -121,7 +121,7 @@ Return a flattened expression with the numbers at the back.
 ```jldoctest
 julia> @syms x y;
 
-julia> SymbolicUtils.flatten_term(+, y + y + x)
+julia> RewriteUtils.flatten_term(+, y + y + x)
 x + 2y
 ```
 """
@@ -152,6 +152,7 @@ function sort_args(f, t)
 end
 
 # Take a struct definition and make it be able to match in `@rule`
+# TODO I think this should be removed
 macro matchable(expr)
     @assert expr.head == :struct
     name = expr.args[2]
@@ -164,9 +165,9 @@ macro matchable(expr)
     fields = map(get_name, fields)
     quote
         $expr
-        SymbolicUtils.istree(::$name) = true
-        SymbolicUtils.operation(::$name) = $name
-        SymbolicUtils.arguments(x::$name) = getfield.((x,), ($(QuoteNode.(fields)...),))
+        RewriteUtils.istree(::$name) = true
+        RewriteUtils.operation(::$name) = $name
+        RewriteUtils.arguments(x::$name) = getfield.((x,), ($(QuoteNode.(fields)...),))
         Base.length(x::$name) = $(length(fields) + 1)
     end |> esc
 end

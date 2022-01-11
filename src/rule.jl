@@ -193,12 +193,12 @@ Declare SLOTS as slot variables for all `@rule` or `@capture` invocations in the
 _Example:_
 
 ```julia
-julia> @slots x y z a b c SymbolicUtils.Chain([
+julia> @slots x y z a b c Chain([
     (@rule x^2 + 2x*y + y^2 => (x + y)^2),
     (@rule x^a * y^b => (x*y)^a * y^(b-a)),
     (@rule +(x...) => sum(x)),
 ])
-SymbolicUtils.Chain(SymbolicUtils.Rule{SymbolicUtils.Term{Any, Nothing}}[...]))
+Chain(Rule{Term[...]))
 ```
 
 See also: [`@rule`](@ref), [`@capture`](@ref)
