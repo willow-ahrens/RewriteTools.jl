@@ -1,34 +1,14 @@
 #--------------------
 #--------------------
-#### Symbolic
-#--------------------
-abstract type Symbolic{T} end
-
-
-Base.isequal(::Symbolic, x) = false
-Base.isequal(x, ::Symbolic) = false
-Base.isequal(::Symbolic, ::Symbolic) = false
-
-#--------------------
-#--------------------
 #### Terms
 #--------------------
 """
-    Term{T}(f, args::AbstractArray)
-
-or
     Term(f, args::AbstractArray)
 
 Symbolic expression representing the result of calling `f(args...)`.
 
 - `operation(t::Term)` returns `f`
 - `arguments(t::Term)` returns `args`
-- `symtype(t::Term)` returns `T`
-
-If `T` is not provided during construction, it is queried by calling
-`SymbolicUtils.promote_symtype(f, map(symtype, args)...)`.
-
-See [promote_symtype](#promote_symtype)
 """
 struct Term
     f::Any
@@ -41,21 +21,14 @@ function ConstructionBase.constructorof(s::Type{Term})
     end
 end
 
-function (::Type{Term})(f, args)
-    Term(f, args, Ref{UInt}(0))
-end
+TermInterface.istree(t::Type{Term}) = true
 
-TermInterface.istree(t::Type{<:Term}) = true
+TermInterface.operation(x::Term) = x.f
 
-function Term(f, args)
-    Term{_promote_symtype(f, args)}(f, args)
-end
+TermInterface.arguments(x::Term) = x.arguments
 
-TermInterface.operation(x::Term) = getfield(x, :f)
-
-unsorted_arguments(x) = TermInterface.arguments(x)
-TermInterface.arguments(x::Term) = getfield(x, :arguments)
-
+Base.isequal(::Term, x) = false
+Base.isequal(x, ::Term) = false
 function Base.isequal(t1::Term, t2::Term)
     t1 === t2 && return true
     symtype(t1) !== symtype(t2) && return false
@@ -111,121 +84,6 @@ const show_simplified = Ref(false)
 
 Base.show(io::IO, t::Term) = show_term(io, t)
 
-isnegative(t::Real) = t < 0
-function isnegative(t)
-    if istree(t) && operation(t) === (*)
-        coeff = first(arguments(t))
-        return isnegative(coeff)
-    end
-    return false
-end
-
-setargs(t, args) = Term{symtype(t)}(operation(t), args)
-cdrargs(args) = setargs(t, cdr(args))
-
-print_arg(io, x::Union{Complex, Rational}; paren=true) = print(io, "(", x, ")")
-isbinop(f) = istree(f) && !istree(operation(f)) && Base.isbinaryoperator(nameof(operation(f)))
-function print_arg(io, x; paren=false)
-    if paren && isbinop(x)
-        print(io, "(", x, ")")
-    else
-        print(io, x)
-    end
-end
-print_arg(io, s::String; paren=true) = show(io, s)
-function print_arg(io, f, x)
-    f !== (*) && return print_arg(io, x)
-    if Base.isbinaryoperator(nameof(f))
-        print_arg(io, x, paren=true)
-    else
-        print_arg(io, x)
-    end
-end
-
-function remove_minus(t)
-    !istree(t) && return -t
-    @assert operation(t) == (*)
-    args = arguments(t)
-    @assert args[1] < 0
-    [-args[1], args[2:end]...]
-end
-
-function show_add(io, args)
-    negs = filter(isnegative, args)
-    nnegs = filter(!isnegative, args)
-    for (i, t) in enumerate(nnegs)
-        i != 1 && print(io, " + ")
-        print_arg(io, +,  t)
-    end
-
-    for (i, t) in enumerate(negs)
-        if i==1 && isempty(nnegs)
-            print_arg(io, -, t)
-        else
-            print(io, " - ")
-            show_mul(io, remove_minus(t))
-        end
-    end
-end
-
-function show_pow(io, args)
-    base, ex = args
-
-    if base isa Real && base < 0
-        print(io, "(")
-        print_arg(io, base)
-        print(io, ")")
-    else
-        print_arg(io, base, paren=true)
-    end
-    print(io, "^")
-    print_arg(io, ex, paren=true)
-end
-
-function show_mul(io, args)
-    length(args) == 1 && return print_arg(io, *, args[1])
-
-    minus = args[1] isa Number && args[1] == -1
-    unit = args[1] isa Number && args[1] == 1
-
-    paren_scalar = (args[1] isa Complex && !_iszero(imag(args[1]))) ||
-                   args[1] isa Rational ||
-                   (args[1] isa Number && !isfinite(args[1]))
-
-    nostar = minus || unit ||
-            (!paren_scalar && args[1] isa Number && !(args[2] isa Number))
-
-    for (i, t) in enumerate(args)
-        if i != 1
-            if i==2 && nostar
-            else
-                print(io, "*")
-            end
-        end
-        if i == 1 && minus
-            print(io, "-")
-        elseif i == 1 && unit
-        else
-            print_arg(io, *, t)
-        end
-    end
-end
-
-function show_ref(io, f, args)
-    x = args[1]
-    idx = args[2:end]
-
-    istree(x) && print(io, "(")
-    print(io, x)
-    istree(x) && print(io, ")")
-    print(io, "[")
-    for i=1:length(idx)
-        print_arg(io, idx[i])
-        i != length(idx) && print(io, ", ")
-    end
-    print(io, "]")
-end
-
 function show_call(io, f, args)
     fname = istree(f) ? Symbol(repr(f)) : nameof(f)
     binary = Base.isbinaryoperator(fname)
@@ -250,10 +108,6 @@ function show_call(io, f, args)
 end
 
 function show_term(io::IO, t)
-    if get(io, :simplify, show_simplified[])
-        return print(IOContext(io, :simplify=>false), simplify(t))
-    end
-
     f = operation(t)
     args = arguments(t)
 
@@ -323,5 +177,3 @@ function print_tree(_io::IO, x::Union{Term}; show_type=false, kw...)
         end
     end
 end
-
-TermInterface.istree(t::Type{<:Symbolic}) = true

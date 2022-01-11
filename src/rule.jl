@@ -439,62 +439,6 @@ macro capture(args...)
     end
 end
 
-#-----------------------------
-#### Associative Commutative Rules
-
-struct ACRule{F,R} <: AbstractRule
-    sets::F
-    rule::R
-    arity::Int
-end
-
-Rule(acr::ACRule)   = acr.rule
-getdepth(r::ACRule) = getdepth(r.rule)
-
-macro acrule(expr)
-    arity = length(expr.args[2].args[2:end])
-    quote
-        ACRule(permutations, $(esc(:(@rule($(expr))))), $arity)
-    end
-end
-
-macro ordered_acrule(expr)
-    arity = length(expr.args[2].args[2:end])
-    quote
-        ACRule(combinations, $(esc(:(@rule($(expr))))), $arity)
-    end
-end
-
-Base.show(io::IO, acr::ACRule) = print(io, "ACRule(", acr.rule, ")")
-
-function (acr::ACRule)(term)
-    r = Rule(acr)
-    if !istree(term)
-        r(term)
-    else
-        f =  operation(term)
-        # Assume that the matcher was formed by closing over a term
-        if f != operation(r.lhs) # Maybe offer a fallback if m.term errors. 
-            return nothing
-        end
-
-        T = symtype(term)
-        args = unsorted_arguments(term)
-
-        itr = acr.sets(eachindex(args), acr.arity)
-
-        for inds in itr
-            result = r(Term{T}(f, @views args[inds]))
-            if result !== nothing
-                # Assumption: inds are unique
-                length(args) == length(inds) && return result
-                return similarterm(term, f, [result, (args[i] for i in eachindex(args) if i ∉ inds)...], symtype(term))
-            end
-        end
-    end
-end
-
-
 struct RuleRewriteError
     rule
     expr
