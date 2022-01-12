@@ -10,6 +10,7 @@ SyntaxInterface = "b33eeca9-aacb-4496-a840-e75f1646a4fb"
 TimerOutputs = "a759f4b9-e2f1-59dc-863e-4aeb61b1ea8f"
 
 [compat]
+AbstractTrees = "0.3"
 julia = "1.1"
 
 [extras]
