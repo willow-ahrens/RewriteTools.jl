@@ -59,7 +59,7 @@ different type than `t`, because `f` also influences the result.
 - `f` is the operation of the term
 - `args` is the arguments
 """
-SyntaxInterface.similarterm(t::Term, f, args) = 
+SyntaxInterface.similarterm(t::Type{<:Term}, f, args) = 
     Term(f, args)
 
 #--------------------
