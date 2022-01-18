@@ -30,26 +30,30 @@ struct NoSaturate end
 (rw::NoSaturate)(x) = [x]
 
 """
-    PassRewrite(rw)
+    SomeRewrite(rw)
 
     A rewriter which returns the original argument if `rw` returns nothing
 """
-struct PassRewrite end
+struct SomeRewrite
+    rw
+end
 
-function (rw::PassRewrite)(x) 
-    y = rw(x)
+function (rw::SomeRewrite)(x) 
+    y = rw.rw(x)
     return y === nothing ? x : y
 end
 
 """
-    PassExpand(rw)
+    SomeExpand(rw)
 
     An expander which returns the original argument if `rw` returns nothing
 """
-struct PassExpand end
+struct SomeExpand
+    rw
+end
 
-function (rw::PassExpand)(x) 
-    y = rw(x)
+function (rw::SomeExpand)(x) 
+    y = rw.rw(x)
     return y === nothing ? [x] : y
 end
 
@@ -336,8 +340,6 @@ end
 struct Fixpoint{C}
     rw::C
 end
-
-Fixpoint(rw) = Fixpoint(rw, true)
 
 function (p::Fixpoint)(x)
     y = p.rw(x)
