@@ -45,20 +45,6 @@ function term(f, args...; type = nothing)
     Term(f, [args...])
 end
 
-"""
-    similarterm(t, f, args)
-
-Create a term that is similar in type to `t`. Extending this function allows packages
-using their own expression types with RewriteToolsto define how new terms should
-be created. Note that `similarterm` may return an object that has a
-different type than `t`, because `f` also influences the result.
-
-## Arguments
-
-- `t` the reference term to use to create similar terms
-- `f` is the operation of the term
-- `args` is the arguments
-"""
 SyntaxInterface.similarterm(t::Type{<:Term}, f, args) = 
     Term(f, args)
 
