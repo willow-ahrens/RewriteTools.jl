@@ -350,19 +350,6 @@ true
 Note that this is syntactic sugar and that it is the same as something like
 `@rule ~x => f(x) ? x : nothing`.
 
-**Context**:
-
-_In predicates_: Contextual predicates are functions wrapped in the `Contextual` type.
-The function is called with 2 arguments: the expression and a context object
-passed during a call to the Rule object (maybe done by passing a context to `simplify` or
-a `RuleSet` object).
-
-The function can use the inputs however it wants, and must return a boolean indicating
-whether the predicate holds or not.
-
-_In the consequent pattern_: Use `(@ctx)` to access the context object on the right hand side
-of an expression.
-
 **Compatibility**:
 Segment variables may still be written as (`~~x`), and slot (`~x`) and segment (`~x...` or `~~x`) syntaxes on the RHS will still substitute the result of the matches.
 
@@ -374,7 +361,7 @@ macro rule(args...)
     expr = args[end]
 
     @assert expr.head == :call && expr.args[1] == :(=>)
-    lhs = expr.args[2]
+    lhs = macroexpand(__module__, expr.args[2])
     rhs = rewrite_rhs(expr.args[3])
     keys = Symbol[]
     lhs_term = makepattern(lhs, keys, slots)
@@ -396,8 +383,7 @@ end
 
 Uses a `Rule` object to capture an expression if it matches the `pattern`. Returns `true` and injects
 slot variable match results into the calling scope when the `pattern` matches, otherwise returns false. The
-rule language for specifying the `pattern` is the same in @capture as it is in `@rule`. Contextual matching
-is not yet supported.
+rule language for specifying the `pattern` is the same in @capture as it is in `@rule`.
 
 ```julia
 julia> @syms a; ex = a^a;
@@ -416,7 +402,7 @@ macro capture(args...)
     length(args) >= 2 || ArgumentError("@capture requires at least two arguments")
     slots = args[1:end-2]
     ex = args[end-1]
-    lhs = args[end]
+    lhs = macroexpand(__module__, args[end])
 
     keys = Symbol[]
     lhs_term = makepattern(lhs, keys, slots)
