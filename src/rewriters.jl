@@ -344,7 +344,7 @@ end
 function (p::Fixpoint)(x)
     y = p.rw(x)
     if y !== nothing
-        while y !== nothing && x !== y && rw.!isequal(x, y)
+        while y !== nothing && x !== y && !isequal(x, y)
             x = y
             y = p.rw(x)
         end
