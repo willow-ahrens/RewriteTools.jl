@@ -30,6 +30,30 @@ struct NoSaturate end
 (rw::NoSaturate)(x) = [x]
 
 """
+    PassRewrite(rw)
+
+    A rewriter which returns the original argument if `rw` returns nothing
+"""
+struct PassRewrite end
+
+function (rw::PassRewrite)(x) 
+    y = rw(x)
+    return y === nothing ? x : y
+end
+
+"""
+    PassExpand(rw)
+
+    An expander which returns the original argument if `rw` returns nothing
+"""
+struct PassExpand end
+
+function (rw::PassExpand)(x) 
+    y = rw(x)
+    return y === nothing ? [x] : y
+end
+
+"""
     `IfElse(cond, rw1, rw2)`
     
     Returns a function which runs the `cond` function on the input, applies
