@@ -1,15 +1,16 @@
+"""
+    A rewriter is any function which takes an expression and returns an
+    expression. A expander is any function which takes an expression and returns
+    a list of possible rewrites. Either function can return `nothing` if there
+    are no changes applicable to the input expression.
+"""
+module Rewriters
+
 using SyntaxInterface: is_operation, istree, operation, similarterm, arguments, node_count
 
-export No, IfElse, If, Chain, RestartedChain, Fixpoint, Postwalk, Prewalk, PassThrough
-
-
-"""
-    A rewriter is any function which takes an expression and returns an expression
-or `nothing`. If `nothing` is returned that means there was no changes applicable
-to the input expression. A saturator is a function which takes an expression and returns
-a list of possible expansions.
-"""
-rewrite
+export IfElse
+export Rewrite, NoRewrite, Fixpoint, Chain, Postwalk, Prewalk, Prestep
+export Expand, NoExpand, Saturate, Branch, Postsearch, Presearch
 
 """
     NoRewrite()
@@ -25,49 +26,36 @@ struct NoRewrite end
 
     An expansion which does not expand the term.
 """
-struct NoSaturate end
+struct NoExpand end
 
-(rw::NoSaturate)(x) = [x]
+(rw::NoExpand)(x) = [x]
 
 """
-    SomeRewrite(rw)
+    Rewrite(rw)
 
-    A rewriter which returns the original argument if `rw` returns nothing
+    A rewriter which returns the original argument even if `rw` returns nothing
 """
-struct SomeRewrite
+struct Rewrite
     rw
 end
 
-function (rw::SomeRewrite)(x) 
+function (rw::Rewrite)(x) 
     y = rw.rw(x)
     return y === nothing ? x : y
 end
 
 """
-    SomeExpand(rw)
+    Expand(rw)
 
-    An expander which returns the original argument if `rw` returns nothing
+    An expander which returns the original argument even if `rw` returns nothing
 """
-struct SomeExpand
+struct Expand
     rw
 end
 
-function (rw::SomeExpand)(x) 
+function (rw::Expand)(x) 
     y = rw.rw(x)
     return y === nothing ? [x] : y
-end
-
-"""
-    RewriteExpand(rw)
-
-    An expander which returns the result of the rewriter `rw` and the original term, 
-    or `nothing` if `rw` returns `nothing`.
-"""
-struct RewriteExpand end
-
-function (rw::RewriteExpand)(x) 
-    y = rw(x)
-    return y === nothing ? nothing : [x, y]
 end
 
 """
@@ -86,17 +74,17 @@ end
 
 
 """
-    `ChainExpand(itr)`
+    `Branch(itr)`
 
     An expander which tries to expand using each expansion in `itr`. If all
     expansions return `nothing`, return `nothing`, otherwise return a list of 
     successful expansions, including the identity.
 """
-struct ChainExpand{C}
+struct Branch{C}
     rws::C
 end
 
-function (p::ChainExpand{C})(x) where {C}
+function (p::Branch{C})(x) where {C}
     ys = Any[x]
     trigger = false
     for rw in p.rws
@@ -110,19 +98,19 @@ function (p::ChainExpand{C})(x) where {C}
 end
 
 """
-    `PostwalkExpand(rw)`
+    `Postsearch(rw)`
 
     An expander which recursively expands the arguments of each node using `rw`,
     then attempts to expand each element in the product of such expansions.  If
     all expanders return `nothing`, returns `nothing`.
 """
-struct PostwalkExpand{C}
+struct Postsearch{C}
     rw::C
 end
 
 defaultexpand(y, x) = y === nothing ? [x] : y
 
-function (p::PostwalkExpand{C})(x) where {C}
+function (p::Postsearch{C})(x) where {C}
     if istree(x)
         x_args = arguments(x)
         y_argss = map(p, x_args)
@@ -143,17 +131,17 @@ function (p::PostwalkExpand{C})(x) where {C}
 end
 
 """
-    `PrewalkExpand(rw)`
+    `Presearch(rw)`
 
     An expander which recursively expands each node using `rw`, then returns the
     product of expanding the arguments of each element in the expansion.  If all
     expanders return `nothing`, returns `nothing`.
 """
-struct PrewalkExpand{C}
+struct Presearch{C}
     rw::C
 end
 
-function (p::PrewalkExpand{C})(x) where {C}
+function (p::Presearch{C})(x) where {C}
     ys = p.rw(x)
     if ys === nothing
         if istree(x)
@@ -190,19 +178,19 @@ function (p::PrewalkExpand{C})(x) where {C}
 end
 
 """
-    `PrewalkRewrite(rw)`
+    `Prewalk(rw)`
 
     An rewriter which recursively rewrites each node using `rw`, then rewrites
     the arguments of the resulting node. If all rewriters return `nothing`,
     returns `nothing`.
 """
-struct PrewalkRewrite{C}
+struct Prewalk{C}
     rw::C
 end
 
 defaultrewrite(y, x) = y === nothing ? x : y
 
-function (p::PrewalkRewrite{C})(x) where {C}
+function (p::Prewalk{C})(x) where {C}
     y = p.rw(x)
     if y !== nothing
         if istree(y)
@@ -216,7 +204,7 @@ function (p::PrewalkRewrite{C})(x) where {C}
         args = arguments(x)
         new_args = map(p, args)
         if !all(isnothing, new_args)
-            return similarterm(y, operation(y), map(defaultrewrite, new_args, args))
+            return similarterm(x, operation(x), map(defaultrewrite, new_args, args))
         else
             return nothing
         end
@@ -226,17 +214,17 @@ function (p::PrewalkRewrite{C})(x) where {C}
 end
 
 """
-    `PostwalkRewrite(rw)`
+    `Postwalk(rw)`
 
     An rewriter which recursively rewrites the arguments of each node using
     `rw`, then rewrites the resulting node. If all rewriters return `nothing`,
     returns `nothing`.
 """
-struct PostwalkRewrite{C}
+struct Postwalk{C}
     rw::C
 end
 
-function (p::PostwalkRewrite{C})(x) where {C}
+function (p::Postwalk{C})(x) where {C}
     if istree(x)
         args = arguments(x)
         new_args = map(p, args)
@@ -253,21 +241,21 @@ end
 
 
 """
-    `PrestepRewrite(rw)`
+    `Prestep(rw)`
 
     An rewriter which recursively rewrites each node using `rw`. If `rw` is
     nothing, it returns `nothing`, otherwise it recurses to the arguments.
 """
-struct PrestepRewrite{C}
+struct Prestep{C}
     rw::C
 end
 
-function (p::PrestepRewrite{C})(x) where {C}
+function (p::Prestep{C})(x) where {C}
     y = p.rw(x)
     if y !== nothing
         if istree(y)
             y_args = arguments(y)
-            return similarterm(y, operation(y), map(y_arg->defaultrewrite(p(y_arg)), y_args))
+            return similarterm(y, operation(y), map(y_arg->defaultrewrite(p(y_arg), y_arg), y_args))
         else
             return y
         end
@@ -277,16 +265,16 @@ function (p::PrestepRewrite{C})(x) where {C}
 end
 
 """
-    `ChainRewrite(itr)`
+    `Chain(itr)`
 
     An rewriter which rewrites using each rewriter in `itr`. If all rewriters
     return `nothing`, return `nothing`.
 """
-struct ChainRewrite{C}
+struct Chain{C}
     rws::C
 end
 
-function (p::ChainRewrite{C})(x) where {C}
+function (p::Chain{C})(x) where {C}
     trigger = false
     for rw in p.rws
         y = rw(x)
@@ -353,3 +341,5 @@ function (p::Fixpoint)(x)
         return nothing
     end
 end
+
+end # module Rewriters
