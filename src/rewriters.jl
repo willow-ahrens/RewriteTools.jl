@@ -73,9 +73,8 @@ end
 
     An expander which recursively expands the arguments of each node using `rw`,
     then attempts to expand each element in the product of such expansions.  If
-    all expanders return `nothing`, returns `nothing`
+    all expanders return `nothing`, returns `nothing`.
 """
-
 struct PostwalkExpand{C}
     rw::C
 end
@@ -102,6 +101,13 @@ function (p::PostwalkExpand{C})(x) where {C}
     end
 end
 
+"""
+    `PrewalkExpand(rw)`
+
+    An expander which recursively expands each node using `rw`, then returns the
+    product of expanding the arguments of each element in the expansion.  If all
+    expanders return `nothing`, returns `nothing`.
+"""
 struct PrewalkExpand{C}
     rw::C
 end
@@ -142,6 +148,13 @@ function (p::PrewalkExpand{C})(x) where {C}
     end
 end
 
+"""
+    `PrewalkRewrite(rw)`
+
+    An rewriter which recursively rewrites each node using `rw`, then rewrites
+    the arguments of the resulting node. If all rewriters return `nothing`,
+    returns `nothing`.
+"""
 struct PrewalkRewrite{C}
     rw::C
 end
@@ -171,6 +184,13 @@ function (p::PrewalkRewrite{C})(x) where {C}
     end
 end
 
+"""
+    `PostwalkRewrite(rw)`
+
+    An rewriter which recursively rewrites the arguments of each node using
+    `rw`, then rewrites the resulting node. If all rewriters return `nothing`,
+    returns `nothing`.
+"""
 struct PostwalkRewrite{C}
     rw::C
 end
@@ -191,7 +211,12 @@ function (p::PostwalkRewrite{C})(x) where {C}
 end
 
 
+"""
+    `PrestepRewrite(rw)`
 
+    An rewriter which recursively rewrites each node using `rw`. If `rw` is
+    nothing, it returns `nothing`, otherwise it recurses to the arguments.
+"""
 struct PrestepRewrite{C}
     rw::C
 end
@@ -200,15 +225,22 @@ function (p::PrestepRewrite{C})(x) where {C}
     y = p.rw(x)
     if y !== nothing
         if istree(y)
-            return similarterm(y, operation(y), map(p, arguments(y)))
+            y_args = arguments(y)
+            return similarterm(y, operation(y), map(y_arg->defaultrewrite(p(y_arg)), y_args))
         else
             return y
         end
     else
-        return x
+        return nothing
     end
 end
 
+"""
+    `ChainRewrite(itr)`
+
+    An rewriter which rewrites using each rewriter in `itr`. If all rewriters
+    return `nothing`, return `nothing`.
+"""
 struct ChainRewrite{C}
     rws::C
 end
@@ -227,24 +259,43 @@ function (p::ChainRewrite{C})(x) where {C}
     end
 end
 
+"""
+    `Saturate(rw)`
+
+    An expander which applies `rw` to `x` until no new terms are generated. If
+    the expander first returns `nothing`, returns `nothing`.
+"""
 struct Saturate{C}
     rw::C
 end
 
 function (p::Saturate{C})(x) where {C}
     n = 1
-    terms = Set(collect(p.rw(x)))
+    ys = p.rw(x)
+    if ys === nothing
+        return nothing
+    end
+    terms = Set(collect(x))
     result = collect(terms)
-    while length(terms) > n
+    while length(terms) > n #TODO this should be a better BFS with an actual frontier.
         n = length(terms)
         result = collect(terms)
-        for term in result
-            union!(terms, p.rw(term))
+        for x in result
+            ys = p.rw(term) 
+            if ys !== nothing
+                union!(terms, ys)
+            end
         end
     end
     return result
 end
 
+"""
+    `Fixpoint(rw)`
+
+    An rewriter which repeatedly applies `rw` to `x` until no changes are made. If
+    the rewriter first returns `nothing`, returns `nothing`.
+"""
 struct Fixpoint{C}
     rw::C
 end
