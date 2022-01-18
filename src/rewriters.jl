@@ -54,6 +54,19 @@ function (rw::PassExpand)(x)
 end
 
 """
+    RewriteExpand(rw)
+
+    An expander which returns the result of the rewriter `rw` and the original term, 
+    or `nothing` if `rw` returns `nothing`.
+"""
+struct PassExpand end
+
+function (rw::PassExpand)(x) 
+    y = rw(x)
+    return y === nothing ? nothing : [x, y]
+end
+
+"""
     `IfElse(cond, rw1, rw2)`
     
     Returns a function which runs the `cond` function on the input, applies
