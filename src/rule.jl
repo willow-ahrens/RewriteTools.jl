@@ -358,10 +358,10 @@ See also: [`@capture`](@ref), [`@slots`](@ref)
 macro rule(args...)
     length(args) >= 1 || ArgumentError("@rule requires at least one argument")
     slots = args[1:end-1]
-    expr = args[end]
+    expr = macroexpand(__module__, args[end]) #TODO I would rather just expand the lhs, but we need to be able to traverse the rhs to handle ~ notation.
 
     @assert expr.head == :call && expr.args[1] == :(=>)
-    lhs = macroexpand(__module__, expr.args[2])
+    lhs = expr.args[2]
     rhs = rewrite_rhs(expr.args[3])
     keys = Symbol[]
     lhs_term = makepattern(lhs, keys, slots)
