@@ -59,9 +59,9 @@ end
     An expander which returns the result of the rewriter `rw` and the original term, 
     or `nothing` if `rw` returns `nothing`.
 """
-struct PassExpand end
+struct RewriteExpand end
 
-function (rw::PassExpand)(x) 
+function (rw::RewriteExpand)(x) 
     y = rw(x)
     return y === nothing ? nothing : [x, y]
 end
