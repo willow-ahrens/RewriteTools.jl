@@ -9,54 +9,8 @@ module Rewriters
 using SyntaxInterface: is_operation, istree, operation, similarterm, arguments, node_count
 
 export IfElse
-export Rewrite, NoRewrite, Fixpoint, Chain, Postwalk, Prewalk, Prestep
-export Expand, NoExpand, Saturate, Branch, Postsearch, Presearch
-
-"""
-    NoRewrite()
-
-    A rewriter which always returns `nothing`
-"""
-struct NoRewrite end
-
-(rw::NoRewrite)(x) = nothing
-
-"""
-    NoExpand()
-
-    An expansion which does not expand the term.
-"""
-struct NoExpand end
-
-(rw::NoExpand)(x) = [x]
-
-"""
-    Rewrite(rw)
-
-    A rewriter which returns the original argument even if `rw` returns nothing
-"""
-struct Rewrite
-    rw
-end
-
-function (rw::Rewrite)(x) 
-    y = rw.rw(x)
-    return y === nothing ? x : y
-end
-
-"""
-    Expand(rw)
-
-    An expander which returns the original argument even if `rw` returns nothing
-"""
-struct Expand
-    rw
-end
-
-function (rw::Expand)(x) 
-    y = rw.rw(x)
-    return y === nothing ? [x] : y
-end
+export Rewrite, NoRewrite, Fixpoint, Prewalk, Postwalk, Chain, Prestep
+export Expand, NoExpand, Saturate, Presearch, Postsearch, Branch
 
 """
     `IfElse(cond, rw1, rw2)`
@@ -71,109 +25,47 @@ struct IfElse{F, A, B}
     no::B
 end
 
-
-
 """
-    `Branch(itr)`
+    Rewrite(rw)
 
-    An expander which tries to expand using each expansion in `itr`. If all
-    expansions return `nothing`, return `nothing`, otherwise return a list of 
-    successful expansions, including the identity.
+    A rewriter which returns the original argument even if `rw` returns nothing
 """
-struct Branch{C}
-    rws::C
+struct Rewrite
+    rw
 end
 
-function (p::Branch{C})(x) where {C}
-    ys = Any[x]
-    trigger = false
-    for rw in p.rws
-        y = rw(x)
-        if y !== nothing
-            trigger = true
-            append!(ys, y)
-        end
-    end
-    return trigger ? ys : nothing
-end
+defaultrewrite(y, x) = y === nothing ? x : y
+(rw::Rewrite)(x) = defaultrewrite(rw.rw(x), x)
 
 """
-    `Postsearch(rw)`
+    NoRewrite()
 
-    An expander which recursively expands the arguments of each node using `rw`,
-    then attempts to expand each element in the product of such expansions.  If
-    all expanders return `nothing`, returns `nothing`.
+    A rewriter which always returns `nothing`
 """
-struct Postsearch{C}
+struct NoRewrite end
+
+(rw::NoRewrite)(x) = nothing
+
+"""
+    `Fixpoint(rw)`
+
+    An rewriter which repeatedly applies `rw` to `x` until no changes are made. If
+    the rewriter first returns `nothing`, returns `nothing`.
+"""
+struct Fixpoint{C}
     rw::C
 end
 
-defaultexpand(y, x) = y === nothing ? [x] : y
-
-function (p::Postsearch{C})(x) where {C}
-    if istree(x)
-        x_args = arguments(x)
-        y_argss = map(p, x_args)
-        if all(isnothing, y_argss)
-            return p.rw(x)
-        else
-            y_argss = map(defaultexpand, y_argss, x_args)
-            zs = []
-            for y_args in map(collect, product(y_argss...))
-                y = similarterm(x, operation(x), yargs)
-                append!(zs, defaultexpand(p.rw(y), y))
-            end
-            return zs
+function (p::Fixpoint)(x)
+    y = p.rw(x)
+    if y !== nothing
+        while y !== nothing && x !== y && !isequal(x, y)
+            x = y
+            y = p.rw(x)
         end
+        return x
     else
-        return p.rw(x)
-    end
-end
-
-"""
-    `Presearch(rw)`
-
-    An expander which recursively expands each node using `rw`, then returns the
-    product of expanding the arguments of each element in the expansion.  If all
-    expanders return `nothing`, returns `nothing`.
-"""
-struct Presearch{C}
-    rw::C
-end
-
-function (p::Presearch{C})(x) where {C}
-    ys = p.rw(x)
-    if ys === nothing
-        if istree(x)
-            x_args = arguments(x)
-            y_argss = map(p, x_args)
-            if all(isnothing, y_argss)
-                return nothing
-            else
-                ys = []
-                y_argss = map(defaultexpand, map(p, x_args), x_args)
-                for y_args in map(collect, product(y_argss...))
-                    push!(ys, similarterm(x, operation(x), y_args))
-                end
-                return ys
-            end
-        else
-            return nothing
-        end
-    else
-        zs = []
-        for y in ys
-            if istree(y)
-                y_args = arguments(y)
-                z_argss = map(defaultexpand, map(p, y_args), y_args)
-                for z_args in map(collect, product(z_argss...))
-                    push!(zs, similarterm(y, operation(x), z_args))
-                end
-            else
-                push!(zs, y)
-            end
-        end
-        return zs
+        return nothing
     end
 end
 
@@ -187,8 +79,6 @@ end
 struct Prewalk{C}
     rw::C
 end
-
-defaultrewrite(y, x) = y === nothing ? x : y
 
 function (p::Prewalk{C})(x) where {C}
     y = p.rw(x)
@@ -239,6 +129,29 @@ function (p::Postwalk{C})(x) where {C}
     end
 end
 
+"""
+    `Chain(itr)`
+
+    An rewriter which rewrites using each rewriter in `itr`. If all rewriters
+    return `nothing`, return `nothing`.
+"""
+struct Chain{C}
+    rws::C
+end
+
+function (p::Chain{C})(x) where {C}
+    trigger = false
+    for rw in p.rws
+        y = rw(x)
+        if y !== nothing
+            trigger = true
+            x = y
+        end
+    end
+    if trigger
+        return x
+    end
+end
 
 """
     `Prestep(rw)`
@@ -265,28 +178,25 @@ function (p::Prestep{C})(x) where {C}
 end
 
 """
-    `Chain(itr)`
+    Expand(rw)
 
-    An rewriter which rewrites using each rewriter in `itr`. If all rewriters
-    return `nothing`, return `nothing`.
+    An expander which returns the original argument even if `rw` returns nothing
 """
-struct Chain{C}
-    rws::C
+struct Expand
+    rw
 end
 
-function (p::Chain{C})(x) where {C}
-    trigger = false
-    for rw in p.rws
-        y = rw(x)
-        if y !== nothing
-            trigger = true
-            x = y
-        end
-    end
-    if trigger
-        return x
-    end
-end
+defaultexpand(y, x) = y === nothing ? [x] : y
+(rw::Expand)(x) = defaultexpand(rw.rw(x), x)
+
+"""
+    NoExpand()
+
+    An expansion which does not expand the term.
+"""
+struct NoExpand end
+
+(rw::NoExpand)(x) = [x]
 
 """
     `Saturate(rw)`
@@ -320,26 +230,105 @@ function (p::Saturate{C})(x) where {C}
 end
 
 """
-    `Fixpoint(rw)`
+    `Presearch(rw)`
 
-    An rewriter which repeatedly applies `rw` to `x` until no changes are made. If
-    the rewriter first returns `nothing`, returns `nothing`.
+    An expander which recursively expands each node using `rw`, then returns the
+    product of expanding the arguments of each element in the expansion.  If all
+    expanders return `nothing`, returns `nothing`.
 """
-struct Fixpoint{C}
+struct Presearch{C}
     rw::C
 end
 
-function (p::Fixpoint)(x)
-    y = p.rw(x)
-    if y !== nothing
-        while y !== nothing && x !== y && !isequal(x, y)
-            x = y
-            y = p.rw(x)
+function (p::Presearch{C})(x) where {C}
+    ys = p.rw(x)
+    if ys === nothing
+        if istree(x)
+            x_args = arguments(x)
+            y_argss = map(p, x_args)
+            if all(isnothing, y_argss)
+                return nothing
+            else
+                ys = []
+                y_argss = map(defaultexpand, map(p, x_args), x_args)
+                for y_args in map(collect, product(y_argss...))
+                    push!(ys, similarterm(x, operation(x), y_args))
+                end
+                return ys
+            end
+        else
+            return nothing
         end
-        return x
     else
-        return nothing
+        zs = []
+        for y in ys
+            if istree(y)
+                y_args = arguments(y)
+                z_argss = map(defaultexpand, map(p, y_args), y_args)
+                for z_args in map(collect, product(z_argss...))
+                    push!(zs, similarterm(y, operation(x), z_args))
+                end
+            else
+                push!(zs, y)
+            end
+        end
+        return zs
     end
+end
+
+"""
+    `Postsearch(rw)`
+
+    An expander which recursively expands the arguments of each node using `rw`,
+    then attempts to expand each element in the product of such expansions.  If
+    all expanders return `nothing`, returns `nothing`.
+"""
+struct Postsearch{C}
+    rw::C
+end
+
+function (p::Postsearch{C})(x) where {C}
+    if istree(x)
+        x_args = arguments(x)
+        y_argss = map(p, x_args)
+        if all(isnothing, y_argss)
+            return p.rw(x)
+        else
+            y_argss = map(defaultexpand, y_argss, x_args)
+            zs = []
+            for y_args in map(collect, product(y_argss...))
+                y = similarterm(x, operation(x), yargs)
+                append!(zs, defaultexpand(p.rw(y), y))
+            end
+            return zs
+        end
+    else
+        return p.rw(x)
+    end
+end
+
+"""
+    `Branch(itr)`
+
+    An expander which tries to expand using each expansion in `itr`. If all
+    expansions return `nothing`, return `nothing`, otherwise return a list of 
+    successful expansions, including the identity.
+"""
+struct Branch{C}
+    rws::C
+end
+
+function (p::Branch{C})(x) where {C}
+    ys = Any[x]
+    trigger = false
+    for rw in p.rws
+        y = rw(x)
+        if y !== nothing
+            trigger = true
+            append!(ys, y)
+        end
+    end
+    return trigger ? ys : nothing
 end
 
 end # module Rewriters
