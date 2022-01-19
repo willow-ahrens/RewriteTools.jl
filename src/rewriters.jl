@@ -1,200 +1,334 @@
+"""
+    A rewriter is any function which takes an expression and returns an
+    expression. A expander is any function which takes an expression and returns
+    a list of possible rewrites. Either function can return `nothing` if there
+    are no changes applicable to the input expression.
+"""
+module Rewriters
+
 using SyntaxInterface: is_operation, istree, operation, similarterm, arguments, node_count
 
-export Empty, IfElse, If, Chain, RestartedChain, Fixpoint, Postwalk, Prewalk, PassThrough
+export IfElse
+export Rewrite, NoRewrite, Fixpoint, Prewalk, Postwalk, Chain, Prestep
+export Expand, NoExpand, Saturate, Presearch, Postsearch, Branch
 
-# Cache of printed rules to speed up @timer
-const repr_cache = IdDict()
-cached_repr(x) = Base.get!(()->repr(x), repr_cache, x)
-
-struct Empty end
-
-(rw::Empty)(x) = nothing
-
-instrument(x, f) = f(x)
-instrument(x::Empty, f) = x
-
+"""
+    `IfElse(cond, rw1, rw2)`
+    
+    Returns a function which runs the `cond` function on the input, applies
+    `rw1` if cond returns true, `rw2` if it retuns false. For example, one
+        might set `rw2` to `NoRewrite()` or `NoSaturate()`
+"""
 struct IfElse{F, A, B}
     cond::F
     yes::A
     no::B
 end
 
-instrument(x::IfElse, f) = IfElse(x.cond, instrument(x.yes, f), instrument(x.no, f))
+"""
+    Rewrite(rw)
 
-function (rw::IfElse)(x)
-    rw.cond(x) ?  rw.yes(x) : rw.no(x)
+    A rewriter which returns the original argument even if `rw` returns nothing
+"""
+struct Rewrite
+    rw
 end
 
-If(f, x) = IfElse(f, x, Empty())
+defaultrewrite(y, x) = y === nothing ? x : y
+(rw::Rewrite)(x) = defaultrewrite(rw.rw(x), x)
 
 """
-A rewriter is any function which takes an expression and returns an expression
-or `nothing`. If `nothing` is returned that means there was no changes applicable
-to the input expression.
+    NoRewrite()
 
-- `Empty()` is a rewriter which always returns `nothing`
-- `Chain(itr)` chain an iterator of rewriters into a single rewriter which applies
-   each chained rewriter in the given order.
-   If a rewriter returns `nothing` this is treated as a no-change.
-- `RestartedChain(itr)` like `Chain(itr)` but restarts from the first rewriter once on the
-   first successful application of one of the chained rewriters.
-- `IfElse(cond, rw1, rw2)` runs the `cond` function on the input, applies `rw1` if cond
-   returns true, `rw2` if it retuns false
-- `If(cond, rw)` is the same as `IfElse(cond, rw, Empty())`
-- `Prewalk(rw; threaded=false, thread_cutoff=100)` returns a rewriter which does a pre-order
-   traversal of a given expression and applies the rewriter `rw`. Note that if
-   `rw` returns `nothing` when a match is not found, then `Prewalk(rw)` will
-   also return nothing unless a match is found at every level of the walk.
-   `threaded=true` will use multi threading for traversal. `thread_cutoff` is
-   the minimum number of nodes in a subtree which should be walked in a
-   threaded spawn.
-- `Postwalk(rw; threaded=false, thread_cutoff=100)` similarly does post-order traversal.
-- `Fixpoint(rw)` returns a rewriter which applies `rw` repeatedly until there are no changes to be made.
-- `PassThrough(rw)` returns a rewriter which if `rw(x)` returns `nothing` will instead
-   return `x` otherwise will return `rw(x)`.
+    A rewriter which always returns `nothing`
+"""
+struct NoRewrite end
+
+(rw::NoRewrite)(x) = nothing
 
 """
-struct Chain
-    rws
-end
+    `Fixpoint(rw)`
 
-function (rw::Chain)(x)
-    for f in rw.rws
-        y = @timer cached_repr(f) f(x)
-        if y !== nothing
-            x = y
-        end
-    end
-    return x
-end
-
-instrument(c::Chain, f) = Chain(map(x->instrument(x,f), c.rws))
-
-struct RestartedChain{Cs}
-    rws::Cs
-end
-
-instrument(c::RestartedChain, f) = RestartedChain(map(x->instrument(x,f), c.rws))
-
-function (rw::RestartedChain)(x)
-    for f in rw.rws
-        y = @timer cached_repr(f) f(x)
-        if y !== nothing
-            return Chain(rw.rws)(y)
-        end
-    end
-    return x
-end
-
-@generated function (rw::RestartedChain{<:NTuple{N,Any}})(x) where N
-    quote
-        Base.@nexprs $N i->begin
-            let f = rw.rws[i]
-                y = @timer cached_repr(repr(f)) f(x)
-                if y !== nothing
-                    return Chain(rw.rws)(y)
-                end
-            end
-        end
-        return x
-    end
-end
+    An rewriter which repeatedly applies `rw` to `x` until no changes are made. If
+    the rewriter first returns `nothing`, returns `nothing`.
+"""
 struct Fixpoint{C}
     rw::C
 end
 
-instrument(x::Fixpoint, f) = Fixpoint(instrument(x.rw, f))
-
-function (rw::Fixpoint)(x)
-    f = rw.rw
-    y = @timer cached_repr(f) f(x)
-    while x !== y && !isequal(x, y)
-        y === nothing && return x
-        x = y
-        y = @timer cached_repr(f) f(x)
-    end
-    return x
-end
-
-struct Walk{ord, C, F, threaded}
-    rw::C
-    thread_cutoff::Int
-    similarterm::F
-end
-
-function instrument(x::Walk{ord, C,F,threaded}, f) where {ord,C,F,threaded}
-    irw = instrument(x.rw, f)
-    Walk{ord, typeof(irw), typeof(x.similarterm), threaded}(irw,
-                                                            x.thread_cutoff,
-                                                            x.similarterm)
-end
-
-using .Threads
-
-function Postwalk(rw; threaded::Bool=false, thread_cutoff=100, similarterm=similarterm)
-    Walk{:post, typeof(rw), typeof(similarterm), threaded}(rw, thread_cutoff, similarterm)
-end
-
-function Prewalk(rw; threaded::Bool=false, thread_cutoff=100, similarterm=similarterm)
-    Walk{:pre, typeof(rw), typeof(similarterm), threaded}(rw, thread_cutoff, similarterm)
-end
-
-struct PassThrough{C}
-    rw::C
-end
-instrument(x::PassThrough, f) = PassThrough(instrument(x.rw, f))
-
-(p::PassThrough)(x) = (y=p.rw(x); y === nothing ? x : y)
-
-passthrough(x, default) = x === nothing ? default : x
-function (p::Walk{ord, C, F, false})(x) where {ord, C, F}
-    @assert ord === :pre || ord === :post
-    if istree(x)
-        if ord === :pre
-            x = p.rw(x)
+function (p::Fixpoint)(x)
+    y = p.rw(x)
+    if y !== nothing
+        while y !== nothing && x !== y && !isequal(x, y)
+            x = y
+            y = p.rw(x)
         end
-        if istree(x)
-            x = p.similarterm(x, operation(x), map(PassThrough(p), arguments(x)))
-        end
-        return ord === :post ? p.rw(x) : x
+        return x
     else
+        return nothing
+    end
+end
+
+"""
+    `Prewalk(rw)`
+
+    An rewriter which recursively rewrites each node using `rw`, then rewrites
+    the arguments of the resulting node. If all rewriters return `nothing`,
+    returns `nothing`.
+"""
+struct Prewalk{C}
+    rw::C
+end
+
+function (p::Prewalk{C})(x) where {C}
+    y = p.rw(x)
+    if y !== nothing
+        if istree(y)
+            args = arguments(y)
+            new_args = map(p, args)
+            return similarterm(y, operation(y), map(defaultrewrite, new_args, args))
+        else 
+            return y
+        end
+    elseif istree(x)
+        args = arguments(x)
+        new_args = map(p, args)
+        if !all(isnothing, new_args)
+            return similarterm(x, operation(x), map(defaultrewrite, new_args, args))
+        else
+            return nothing
+        end
+    else
+        return nothing
+    end
+end
+
+"""
+    `Postwalk(rw)`
+
+    An rewriter which recursively rewrites the arguments of each node using
+    `rw`, then rewrites the resulting node. If all rewriters return `nothing`,
+    returns `nothing`.
+"""
+struct Postwalk{C}
+    rw::C
+end
+
+function (p::Postwalk{C})(x) where {C}
+    if istree(x)
+        args = arguments(x)
+        new_args = map(p, args)
+        if all(isnothing, new_args)
+            return p.rw(x)
+        else
+            y = similarterm(x, operation(x), map(defaultrewrite, new_args, args))
+            defaultrewrite(p.rw(y), y)
+        end
+    else 
         return p.rw(x)
     end
 end
 
-function (p::Walk{ord, C, F, true})(x) where {ord, C, F}
-    @assert ord === :pre || ord === :post
-    if istree(x)
-        if ord === :pre
-            x = p.rw(x)
+"""
+    `Chain(itr)`
+
+    An rewriter which rewrites using each rewriter in `itr`. If all rewriters
+    return `nothing`, return `nothing`.
+"""
+struct Chain{C}
+    rws::C
+end
+
+function (p::Chain{C})(x) where {C}
+    trigger = false
+    for rw in p.rws
+        y = rw(x)
+        if y !== nothing
+            trigger = true
+            x = y
         end
-        if istree(x)
-            _args = map(arguments(x)) do arg
-                if node_count(arg) > p.thread_cutoff
-                    Threads.@spawn p(arg)
-                else
-                    p(arg)
-                end
+    end
+    if trigger
+        return x
+    end
+end
+
+"""
+    `Prestep(rw)`
+
+    An rewriter which recursively rewrites each node using `rw`. If `rw` is
+    nothing, it returns `nothing`, otherwise it recurses to the arguments.
+"""
+struct Prestep{C}
+    rw::C
+end
+
+function (p::Prestep{C})(x) where {C}
+    y = p.rw(x)
+    if y !== nothing
+        if istree(y)
+            y_args = arguments(y)
+            return similarterm(y, operation(y), map(y_arg->defaultrewrite(p(y_arg), y_arg), y_args))
+        else
+            return y
+        end
+    else
+        return nothing
+    end
+end
+
+"""
+    Expand(rw)
+
+    An expander which returns the original argument even if `rw` returns nothing
+"""
+struct Expand
+    rw
+end
+
+defaultexpand(y, x) = y === nothing ? [x] : y
+(rw::Expand)(x) = defaultexpand(rw.rw(x), x)
+
+"""
+    NoExpand()
+
+    An expansion which does not expand the term.
+"""
+struct NoExpand end
+
+(rw::NoExpand)(x) = [x]
+
+"""
+    `Saturate(rw)`
+
+    An expander which applies `rw` to `x` until no new terms are generated. If
+    the expander first returns `nothing`, returns `nothing`.
+"""
+struct Saturate{C}
+    rw::C
+end
+
+function (p::Saturate{C})(x) where {C}
+    n = 1
+    ys = p.rw(x)
+    if ys === nothing
+        return nothing
+    end
+    terms = Set(collect(x))
+    result = collect(terms)
+    while length(terms) > n #TODO this should be a better BFS with an actual frontier.
+        n = length(terms)
+        result = collect(terms)
+        for x in result
+            ys = p.rw(term) 
+            if ys !== nothing
+                union!(terms, ys)
             end
-            args = map((t,a) -> passthrough(t isa Task ? fetch(t) : t, a), _args, arguments(x))
-            t = p.similarterm(x, operation(x), args)
         end
-        return ord === :post ? p.rw(t) : t
+    end
+    return result
+end
+
+"""
+    `Presearch(rw)`
+
+    An expander which recursively expands each node using `rw`, then returns the
+    product of expanding the arguments of each element in the expansion.  If all
+    expanders return `nothing`, returns `nothing`.
+"""
+struct Presearch{C}
+    rw::C
+end
+
+function (p::Presearch{C})(x) where {C}
+    ys = p.rw(x)
+    if ys === nothing
+        if istree(x)
+            x_args = arguments(x)
+            y_argss = map(p, x_args)
+            if all(isnothing, y_argss)
+                return nothing
+            else
+                ys = []
+                y_argss = map(defaultexpand, map(p, x_args), x_args)
+                for y_args in map(collect, product(y_argss...))
+                    push!(ys, similarterm(x, operation(x), y_args))
+                end
+                return ys
+            end
+        else
+            return nothing
+        end
+    else
+        zs = []
+        for y in ys
+            if istree(y)
+                y_args = arguments(y)
+                z_argss = map(defaultexpand, map(p, y_args), y_args)
+                for z_args in map(collect, product(z_argss...))
+                    push!(zs, similarterm(y, operation(x), z_args))
+                end
+            else
+                push!(zs, y)
+            end
+        end
+        return zs
+    end
+end
+
+"""
+    `Postsearch(rw)`
+
+    An expander which recursively expands the arguments of each node using `rw`,
+    then attempts to expand each element in the product of such expansions.  If
+    all expanders return `nothing`, returns `nothing`.
+"""
+struct Postsearch{C}
+    rw::C
+end
+
+function (p::Postsearch{C})(x) where {C}
+    if istree(x)
+        x_args = arguments(x)
+        y_argss = map(p, x_args)
+        if all(isnothing, y_argss)
+            return p.rw(x)
+        else
+            y_argss = map(defaultexpand, y_argss, x_args)
+            zs = []
+            for y_args in map(collect, product(y_argss...))
+                y = similarterm(x, operation(x), yargs)
+                append!(zs, defaultexpand(p.rw(y), y))
+            end
+            return zs
+        end
     else
         return p.rw(x)
     end
 end
 
-function instrument_io(x)
-    function io_instrumenter(r)
-        function (args...)
-            println("Rule: ", r)
-            println("Input: ", args)
-            res = r(args...)
-            println("Output: ", res)
-            res
+"""
+    `Branch(itr)`
+
+    An expander which tries to expand using each expansion in `itr`. If all
+    expansions return `nothing`, return `nothing`, otherwise return a list of 
+    successful expansions, including the identity.
+"""
+struct Branch{C}
+    rws::C
+end
+
+function (p::Branch{C})(x) where {C}
+    ys = Any[x]
+    trigger = false
+    for rw in p.rws
+        y = rw(x)
+        if y !== nothing
+            trigger = true
+            append!(ys, y)
         end
     end
-
-    instrument(x, io_instrumenter)
+    return trigger ? ys : nothing
 end
+
+end # module Rewriters
