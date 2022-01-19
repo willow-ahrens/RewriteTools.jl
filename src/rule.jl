@@ -149,7 +149,7 @@ function (r::Rule)(term)
 
     try
         # n == 1 means that exactly one term of the input (term,) was matched
-        success(bindings, n) = n == 1 ? (@timer "RHS" rhs(bindings)) : nothing
+        success(bindings, n) = n == 1 ? rhs(bindings) : nothing
         return r.matcher(success, (term,), EMPTY_DICT)
     catch err
         throw(RuleRewriteError(r, term))
