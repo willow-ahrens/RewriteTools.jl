@@ -120,7 +120,7 @@ Return a flattened expression with the numbers at the back.
 # Example
 ```jldoctest
 julia> ex = RewriteTools.flatten_term(+, term(+, :a, term(+, :b, :c)))
-:a + :b + :c
+a + b + c
 
 julia> ex == term(+, :a, :b, :c)
 true

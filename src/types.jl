@@ -31,8 +31,10 @@ function Base.isequal(t1::Term, t2::Term)
 
     isequal(operation(t1), operation(t2)) &&
         length(a1) == length(a2) &&
-        all(isequal(l,r) for (l, r) in zip(a1,a2))
+        all(isequal(l,r) for (l, r) in zip(a1, a2))
 end
+
+Base.:(==)(t1::Term, t2::Term) = isequal(t1, t2)
 
 ## This is much faster than hash of an array of Any
 hashvec(xs, z) = foldr(hash, xs, init=z)
