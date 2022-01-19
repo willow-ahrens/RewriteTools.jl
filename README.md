@@ -20,6 +20,6 @@ julia> using RewriteTools
 
 julia> r = @slots a b c @rule (a * b) + (a * c) => term(*, a, term(+, b, c))
 
-julia> r(term(+, term(*, 1, 2), term(1, 3)))
+julia> r(term(+, term(*, 1, 2), term(*, 1, 3)))
 1 * (2 + 3)
 ```
