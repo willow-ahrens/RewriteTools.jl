@@ -56,6 +56,25 @@ const show_simplified = Ref(false)
 
 Base.show(io::IO, t::Term) = show_term(io, t)
 
+print_arg(io, x::Union{Complex, Rational}; paren=true) = print(io, "(", x, ")")
+isbinop(f) = istree(f) && !istree(operation(f)) && Base.isbinaryoperator(nameof(operation(f)))
+function print_arg(io, x; paren=false)
+    if paren && isbinop(x)
+        print(io, "(", x, ")")
+    else
+        print(io, x)
+    end
+end
+print_arg(io, s::String; paren=true) = show(io, s)
+function print_arg(io, f, x)
+    f !== (*) && return print_arg(io, x)
+    if Base.isbinaryoperator(nameof(f))
+        print_arg(io, x, paren=true)
+    else
+        print_arg(io, x)
+    end
+end
+
 function show_call(io, f, args)
     fname = istree(f) ? Symbol(repr(f)) : nameof(f)
     binary = Base.isbinaryoperator(fname)
