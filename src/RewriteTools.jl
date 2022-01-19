@@ -13,7 +13,7 @@ include("utils.jl")
 # A library for composing expr -> expr functions
 include("rewriters.jl")
 
-export @rule, RuleSet, @capture, @slots
+export @rule, @capture, @slots
 
 # Rule type and @rule macro
 include("rule.jl")

@@ -31,8 +31,10 @@ function Base.isequal(t1::Term, t2::Term)
 
     isequal(operation(t1), operation(t2)) &&
         length(a1) == length(a2) &&
-        all(isequal(l,r) for (l, r) in zip(a1,a2))
+        all(isequal(l,r) for (l, r) in zip(a1, a2))
 end
+
+Base.:(==)(t1::Term, t2::Term) = isequal(t1, t2)
 
 ## This is much faster than hash of an array of Any
 hashvec(xs, z) = foldr(hash, xs, init=z)
@@ -45,21 +47,7 @@ function term(f, args...; type = nothing)
     Term(f, [args...])
 end
 
-"""
-    similarterm(t, f, args)
-
-Create a term that is similar in type to `t`. Extending this function allows packages
-using their own expression types with RewriteToolsto define how new terms should
-be created. Note that `similarterm` may return an object that has a
-different type than `t`, because `f` also influences the result.
-
-## Arguments
-
-- `t` the reference term to use to create similar terms
-- `f` is the operation of the term
-- `args` is the arguments
-"""
-SyntaxInterface.similarterm(t::Term, f, args) = 
+SyntaxInterface.similarterm(t::Type{<:Term}, f, args) = 
     Term(f, args)
 
 #--------------------
@@ -69,6 +57,25 @@ SyntaxInterface.similarterm(t::Term, f, args) =
 const show_simplified = Ref(false)
 
 Base.show(io::IO, t::Term) = show_term(io, t)
+
+print_arg(io, x::Union{Complex, Rational}; paren=true) = print(io, "(", x, ")")
+isbinop(f) = istree(f) && !istree(operation(f)) && Base.isbinaryoperator(nameof(operation(f)))
+function print_arg(io, x; paren=false)
+    if paren && isbinop(x)
+        print(io, "(", x, ")")
+    else
+        print(io, x)
+    end
+end
+print_arg(io, s::String; paren=true) = show(io, s)
+function print_arg(io, f, x)
+    f !== (*) && return print_arg(io, x)
+    if Base.isbinaryoperator(nameof(f))
+        print_arg(io, x, paren=true)
+    else
+        print_arg(io, x)
+    end
+end
 
 function show_call(io, f, args)
     fname = istree(f) ? Symbol(repr(f)) : nameof(f)
