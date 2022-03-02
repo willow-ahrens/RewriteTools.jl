@@ -7,6 +7,7 @@
 module Rewriters
 
 using SyntaxInterface: is_operation, istree, operation, similarterm, arguments, node_count
+using Base.Iterators
 
 export IfElse
 export Rewrite, NoRewrite, Fixpoint, Prewalk, Postwalk, Chain, Prestep
@@ -297,7 +298,7 @@ function (p::Postsearch{C})(x) where {C}
             y_argss = map(defaultexpand, y_argss, x_args)
             zs = []
             for y_args in map(collect, product(y_argss...))
-                y = similarterm(x, operation(x), yargs)
+                y = similarterm(x, operation(x), y_args)
                 append!(zs, defaultexpand(p.rw(y), y))
             end
             return zs

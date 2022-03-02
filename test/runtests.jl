@@ -23,6 +23,6 @@ if haskey(ENV, "REWRITETOOLS_BENCHMARK_ONLY")
     include("benchmark.jl")
 else
     include("basics.jl")
+    include("rule.jl")
     include("rewrite.jl")
-    include("saturate.jl")
 end
