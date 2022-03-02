@@ -325,7 +325,7 @@ function (p::Branch{C})(x) where {C}
         y = rw(x)
         if y !== nothing
             trigger = true
-            append!(ys, y)
+            push!(ys, y)
         end
     end
     return trigger ? ys : nothing

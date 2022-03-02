@@ -24,4 +24,5 @@ if haskey(ENV, "REWRITETOOLS_BENCHMARK_ONLY")
 else
     include("basics.jl")
     include("rewrite.jl")
+    include("saturate.jl")
 end
