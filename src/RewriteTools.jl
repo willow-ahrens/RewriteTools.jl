@@ -3,6 +3,7 @@ module RewriteTools
 export @syms, term, showraw, hasmetadata, getmetadata, setmetadata
 
 using SyntaxInterface
+using Base.Iterators
 import Base: +, -, *, /, //, \, ^, ImmutableDict
 include("types.jl")
 export istree, operation, arguments, similarterm
