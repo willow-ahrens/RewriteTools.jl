@@ -215,13 +215,13 @@ function (p::Saturate{C})(x) where {C}
     if ys === nothing
         return nothing
     end
-    terms = Set(collect(x))
+    terms = Set(collect(ys))
     result = collect(terms)
     while length(terms) > n #TODO this should be a better BFS with an actual frontier.
         n = length(terms)
         result = collect(terms)
         for x in result
-            ys = p.rw(term) 
+            ys = p.rw(x) 
             if ys !== nothing
                 union!(terms, ys)
             end
@@ -251,7 +251,7 @@ function (p::Presearch{C})(x) where {C}
                 return nothing
             else
                 ys = []
-                y_argss = map(defaultexpand, map(p, x_args), x_args)
+                y_argss = map(defaultexpand, y_argss, x_args)
                 for y_args in map(collect, product(y_argss...))
                     push!(ys, similarterm(x, operation(x), y_args))
                 end
@@ -267,7 +267,7 @@ function (p::Presearch{C})(x) where {C}
                 y_args = arguments(y)
                 z_argss = map(defaultexpand, map(p, y_args), y_args)
                 for z_args in map(collect, product(z_argss...))
-                    push!(zs, similarterm(y, operation(x), z_args))
+                    push!(zs, similarterm(y, operation(y), z_args))
                 end
             else
                 push!(zs, y)
@@ -326,7 +326,7 @@ function (p::Branch{C})(x) where {C}
         y = rw(x)
         if y !== nothing
             trigger = true
-            push!(ys, y)
+            append!(ys, y)
         end
     end
     return trigger ? ys : nothing
