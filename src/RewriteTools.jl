@@ -1,6 +1,6 @@
 module RewriteTools
 
-export @syms, term, showraw, hasmetadata, getmetadata, setmetadata, dollar
+export @syms, term, showraw, hasmetadata, getmetadata, setmetadata
 
 using SyntaxInterface
 import Base: +, -, *, /, //, \, ^, ImmutableDict

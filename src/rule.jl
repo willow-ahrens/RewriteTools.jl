@@ -55,9 +55,6 @@ function makeslot(s::Expr, keys)
     :(Slot($(QuoteNode(name)), $(esc(s.args[2]))))
 end
 
-
-dollar(ex) = ex
-
 function makepattern(expr, keys, slots, splat = false)
     res = if expr isa Expr
         if expr.head === :call
