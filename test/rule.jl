@@ -13,6 +13,9 @@ end
     @test r(1) === 4
     @test r(1.0) === 4
     @test r(2) === nothing
+
+    r = @rule dollar(2) => 3
+    @eqtest r(2) == 3
 end
 
 @testset "Slot matcher" begin
