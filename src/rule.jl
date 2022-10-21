@@ -58,7 +58,9 @@ end
 function makepattern(expr, keys, slots, splat = false)
     res = if expr isa Expr
         if expr.head === :call
-            if expr.args[1] === :(~)
+            if expr.args[1] === :dollar
+                return esc(expr)
+            elseif expr.args[1] === :(~)
                 if expr.args[2] isa Expr && expr.args[2].head === :call expr.args[2].args[1] == :(~)
                     # matches ~~x::predicate or ~~x::predicate...
                     return makesegment(expr.args[2].args[2], keys)
