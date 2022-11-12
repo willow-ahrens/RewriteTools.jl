@@ -7,7 +7,7 @@ script = tempname() * ".jl"
 benchpath = joinpath(pkgpath, "benchmark", "benchmarks.jl")
 cp(benchpath, script)
 
-j = judge(pkgpath, "master", retune=true, script=script)
+j = judge(pkgpath, "main", retune=true, script=script)
 
 println("MASTER BRANCH")
 println(j.baseline_results)

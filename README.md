@@ -1,7 +1,7 @@
 # RewriteTools
 
-[![Build Status](https://github.com/willow-ahrens/RewriteTools.jl/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/willow-ahrens/RewriteTools.jl/actions/workflows/ci.yml?query=branch%3Amaster)
-[![Coverage](https://codecov.io/gh/willow-ahrens/RewriteTools.jl/branch/master/graph/badge.svg)](https://codecov.io/gh/willow-ahrens/RewriteTools.jl)
+[![Build Status](https://github.com/willow-ahrens/RewriteTools.jl/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/willow-ahrens/RewriteTools.jl/actions/workflows/ci.yml?query=branch%3Amain)
+[![Coverage](https://codecov.io/gh/willow-ahrens/RewriteTools.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/willow-ahrens/RewriteTools.jl)
 
 RewriteTools.jl is a utility for term rewriting. RewriteTools.jl is a
 fork of [SymbolicUtils.jl](https://github.com/JuliaSymbolics/SymbolicUtils.jl)
