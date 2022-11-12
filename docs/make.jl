@@ -5,12 +5,12 @@ DocMeta.setdocmeta!(RewriteTools, :DocTestSetup, :(using RewriteTools); recursiv
 
 makedocs(;
     modules=[RewriteTools],
-    authors="Peter Ahrens",
-    repo="https://github.com/peterahrens/RewriteTools.jl/blob/{commit}{path}#{line}",
+    authors="Willow Ahrens",
+    repo="https://github.com/willow-ahrens/RewriteTools.jl/blob/{commit}{path}#{line}",
     sitename="RewriteTools.jl",
     format=Documenter.HTML(;
         prettyurls=get(ENV, "CI", "false") == "true",
-        canonical="https://peterahrens.github.io/RewriteTools.jl",
+        canonical="https://willow-ahrens.github.io/RewriteTools.jl",
         assets=String[],
     ),
     pages=[
@@ -19,6 +19,6 @@ makedocs(;
 )
 
 deploydocs(;
-    repo="github.com/peterahrens/RewriteTools.jl",
+    repo="github.com/willow-ahrens/RewriteTools.jl",
     devbranch="main",
 )

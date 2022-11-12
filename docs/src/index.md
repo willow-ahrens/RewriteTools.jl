@@ -4,7 +4,7 @@ CurrentModule = RewriteTools
 
 # RewriteTools
 
-Documentation for [RewriteTools](https://github.com/peterahrens/RewriteTools.jl).
+Documentation for [RewriteTools](https://github.com/willow-ahrens/RewriteTools.jl).
 
 ```@index
 ```
