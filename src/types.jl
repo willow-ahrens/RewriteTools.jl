@@ -141,28 +141,3 @@ function mapvalues(f, d1::AbstractDict)
     end
     d
 end
-
-import AbstractTrees
-
-struct TreePrint
-    op
-    x
-end
-AbstractTrees.children(x::Term) = arguments(x)
-AbstractTrees.children(x::TreePrint) = [x.x[1], x.x[2]]
-
-print_tree(x; show_type=false, maxdepth=Inf, kw...) = print_tree(stdout, x; show_type=show_type, maxdepth=maxdepth, kw...)
-function print_tree(_io::IO, x::Union{Term}; show_type=false, kw...)
-    AbstractTrees.print_tree(_io, x; withinds=true, kw...) do io, y, inds
-        if istree(y)
-            print(io, operation(y))
-        elseif y isa TreePrint
-            print(io, "(", y.op, ")")
-        else
-            print(io, y)
-        end
-        if !(y isa TreePrint) && show_type
-            print(io, " [", typeof(y), "]")
-        end
-    end
-end
