@@ -12,14 +12,14 @@ which implements
 
 ## Rule-based rewriting
 
-Rewrite rules match and transform an expression. A rule is written using either the `@rule` macro or the `@acrule` macro. It creates a callable `Rule` object.
+Rewrite rules match and transform an expression. A rule is written using the `@rule` macro and creates a callable `Rule` object.
 
-### Basics of rule-based term rewriting in SymbolicUtils
+### Basics of rule-based term rewriting in RewriteTools
 
 Here is a simple rewrite rule, that uses formula for the double angle of the sine function:
 
 ```julia:rewrite1
-using SymbolicUtils
+using RewriteTools
 
 @syms w z α::Real β::Real
 
@@ -99,24 +99,9 @@ r = @rule ~x + ~~y::(ys->iseven(length(ys))) => "odd terms";
 @show r(a + b)
 ```
 
-
-### Associative-Commutative Rules
-
-Given an expression `f(x, f(y, z, u), v, w)`, a `f` is said to be associative if the expression is equivalent to `f(x, y, z, u, v, w)` and commutative if the order of arguments does not matter.  SymbolicUtils has a special `@acrule` macro meant for rules on functions which are associate and commutative such as addition and multiplication of real and complex numbers.
-
-```julia:acr
-@syms x y z
-
-acr = @acrule((~a)^(~x) * (~a)^(~y) => (~a)^(~x + ~y))
-
-acr(x^y * x^z)
-```
-
-although in case of `Number` it also works the same way with regular `@rule` since autosimplification orders and applies associativity and commutativity to the expression.
-
 ### Example of applying the rules to simplify expression
 
-Consider expression `(cos(x) + sin(x))^2` that we would like simplify by applying some trigonometric rules. First, we need rule to expand square of `cos(x) + sin(x)`. First we try the simplest rule to expand square of the sum and try it on simple expression
+Consider expression `(sin(x) + cos(x))^2` that we would like simplify by applying some trigonometric rules. First, we need rule to expand square of `sin(x) + cos(x)`. First we try the simplest rule to expand square of the sum and try it on simple expression
 ```julia:rewrite9
 using SymbolicUtils
 
@@ -124,26 +109,10 @@ using SymbolicUtils
 
 sqexpand = @rule (~x + ~y)^2 => (~x)^2 + (~y)^2 + 2 * ~x * ~y
 
-sqexpand((cos(x) + sin(x))^2)
+sqexpand((sin(x) + cos(x))^2)
 ```
 
-It works. This can be further simplified using Pythagorean identity and check it
-
-```julia:rewrite10
-pyid = @rule sin(~x)^2 + cos(~x)^2 => 1
-
-pyid(cos(x)^2 + sin(x)^2) === nothing
-```
-
-Why does it return `nothing`? If we look at the rule, we see that the order of `sin(x)` and `cos(x)` is different. Therefore, in order to work, the rule needs to be associative-commutative.
-
-```julia:rewrite11
-acpyid = @acrule sin(~x)^2 + cos(~x)^2 => 1
-
-acpyid(cos(x)^2 + sin(x)^2 + 2cos(x)*sin(x))
-```
-
-It has been some work. Fortunately rules may be [chained together](#chaining rewriters) into more sophisticated rewriters to avoid manual application of the rules.
+Fortunately rules may be [chained together](#chaining rewriters) into more sophisticated rewriters to avoid manual application of the rules.
 
 
 ## Composing rewriters
@@ -152,7 +121,7 @@ A rewriter is any callable object which takes an expression and returns an expre
 or `nothing`. If `nothing` is returned that means there was no changes applicable
 to the input expression. The Rules we created above are rewriters.
 
-The `SymbolicUtils.Rewriters` module contains some types which create and transform
+The `RewriteTools.Rewriters` module contains some types which create and transform
 rewriters.
 
 - `Empty()` is a rewriter which always returns `nothing`
@@ -186,46 +155,46 @@ Several rules may be chained to give chain of rules. Chain is an array of rules 
 To check that, we will combine rules from [previous example](#example of applying the rules to simplify expression) into a chain
 
 ```julia:composing1
-using SymbolicUtils
-using SymbolicUtils.Rewriters
+using RewriteTools
+using RewriteTools.Rewriters
 
 sqexpand = @rule (~x + ~y)^2 => (~x)^2 + (~y)^2 + 2 * ~x * ~y
-acpyid = @acrule sin(~x)^2 + cos(~x)^2 => 1
+pyid = @rule sin(~x)^2 + cos(~x)^2 => 1
 
-csa = Chain([sqexpand, acpyid])
+csa = Chain([sqexpand, pyid])
 
-csa((cos(x) + sin(x))^2)
+csa((sin(x) + cos(x))^2)
 ```
 
 Important feature of `Chain` is that it returns the expression instead of `nothing` if it doesn't change the expression
 
 ```julia:composing2
-Chain([@acrule sin(~x)^2 + cos(~x)^2 => 1])((cos(x) + sin(x))^2)
+Chain([@rule sin(~x)^2 + cos(~x)^2 => 1])((sin(x) + cos(x))^2)
 ```
 
 it's important to notice, that chain is ordered, so if rules are in different order it wouldn't work the same as in earlier example
 
 ```julia:composing3
-cas = Chain([acpyid, sqexpand])
+cas = Chain([pyid, sqexpand])
 
-cas((cos(x) + sin(x))^2)
+cas((sin(x) + cos(x))^2)
 ```
 since Pythagorean identity is applied before square expansion, so it is unable to match squares of sine and cosine.
 
 One way to circumvent the problem of order of applying rules in chain is to use `RestartedChain`
 
 ```julia:composing4
-using SymbolicUtils.Rewriters: RestartedChain
+using RewriteTools.Rewriters: RestartedChain
 
-rcas = RestartedChain([acpyid, sqexpand])
+rcas = RestartedChain([pyid, sqexpand])
 
-rcas((cos(x) + sin(x))^2)
+rcas((sin(x) + cos(x))^2)
 ```
 
-It restarts the chain after each successful application of a rule, so after `sqexpand` is hit it (re)starts again and successfully applies `acpyid` to resulting expression.
+It restarts the chain after each successful application of a rule, so after `sqexpand` is hit it (re)starts again and successfully applies `pyid` to resulting expression.
 
 You can also use `Fixpoint` to apply the rules until there are no changes.
 
 ```julia:composing5
-Fixpoint(cas)((cos(x) + sin(x))^2)
+Fixpoint(cas)((sin(x) + cos(x))^2)
 ```
