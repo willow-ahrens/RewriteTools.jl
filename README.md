@@ -1,7 +1,18 @@
 # RewriteTools
 
-[![Build Status](https://github.com/willow-ahrens/RewriteTools.jl/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/willow-ahrens/RewriteTools.jl/actions/workflows/ci.yml?query=branch%3Amain)
-[![Coverage](https://codecov.io/gh/willow-ahrens/RewriteTools.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/willow-ahrens/RewriteTools.jl)
+[docs]:https://willow-ahrens.github.io/RewriteTools.jl/stable
+[ddocs]:https://willow-ahrens.github.io/RewriteTools.jl/dev
+[ci]:https://github.com/willow-ahrens/RewriteTools.jl/actions/workflows/CI.yml?query=branch%3Amain
+[cov]:https://codecov.io/gh/willow-ahrens/RewriteTools.jl
+
+[docs_ico]:https://img.shields.io/badge/docs-stable-blue.svg
+[ddocs_ico]:https://img.shields.io/badge/docs-dev-blue.svg
+[ci_ico]:https://github.com/willow-ahrens/RewriteTools.jl/actions/workflows/CI.yml/badge.svg?branch=main
+[cov_ico]:https://codecov.io/gh/willow-ahrens/RewriteTools.jl/branch/main/graph/badge.svg
+
+| **Documentation**                             | **Build Status**                      |
+|:---------------------------------------------:|:-------------------------------------:|
+| [![][docs_ico]][docs] [![][ddocs_ico]][ddocs] | [![][ci_ico]][ci] [![][cov_ico]][cov] |
 
 RewriteTools.jl is a utility for term rewriting. RewriteTools.jl is a
 fork of [SymbolicUtils.jl](https://github.com/JuliaSymbolics/SymbolicUtils.jl)
@@ -42,4 +53,5 @@ A rewriter is any callable object that takes an expression and returns either a 
 - `Prewalk(rw)`: Performs a pre-order traversal of an expression, applying `rw` at each step. `threaded` enables multithreading.
 - `Postwalk(rw)`: Post-order traversal, applying `rw`.
 - `Fixpoint(rw)`: Repeatedly applies `rw` until no further changes occur.
+- `Prestep(rw)`: Recursively rewrites each node using `rw`. Only recurses if `rw` is not nothing.
 - `Rewrite(rw)`: If `rw(x)` returns `nothing`, `Rewrite` returns `x` instead.

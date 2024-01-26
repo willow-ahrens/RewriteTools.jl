@@ -18,6 +18,7 @@ A rewriter is any callable object that takes an expression and returns either a 
 - `Prewalk(rw)`: Performs a pre-order traversal of an expression, applying `rw` at each step.
 - `Postwalk(rw)`: Post-order traversal, applying `rw`.
 - `Fixpoint(rw)`: Repeatedly applies `rw` until no further changes occur.
+- `Prestep(rw)`: Recursively rewrites each node using `rw`. Only recurses if `rw` is not nothing.
 - `Rewrite(rw)`: If `rw(x)` returns `nothing`, `Rewrite` returns `x` instead.
 
 ### Chaining Rewriters
