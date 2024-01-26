@@ -2,12 +2,12 @@
 
 [docs]:https://willow-ahrens.github.io/RewriteTools.jl/stable
 [ddocs]:https://willow-ahrens.github.io/RewriteTools.jl/dev
-[ci]:https://github.com/willow-ahrens/RewriteTools.jl/actions/workflows/CI.yml?query=branch%3Amain
+[ci]:https://github.com/willow-ahrens/RewriteTools.jl/actions/workflows/ci.yml?query=branch%3Amain
 [cov]:https://codecov.io/gh/willow-ahrens/RewriteTools.jl
 
 [docs_ico]:https://img.shields.io/badge/docs-stable-blue.svg
 [ddocs_ico]:https://img.shields.io/badge/docs-dev-blue.svg
-[ci_ico]:https://github.com/willow-ahrens/RewriteTools.jl/actions/workflows/CI.yml/badge.svg?branch=main
+[ci_ico]:https://github.com/willow-ahrens/RewriteTools.jl/actions/workflows/ci.yml/badge.svg?branch=main
 [cov_ico]:https://codecov.io/gh/willow-ahrens/RewriteTools.jl/branch/main/graph/badge.svg
 
 | **Documentation**                             | **Build Status**                      |
