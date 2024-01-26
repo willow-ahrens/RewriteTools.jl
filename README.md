@@ -39,7 +39,7 @@ A rewriter is any callable object that takes an expression and returns either a 
 - `RestartedChain(itr)`: Similar to `Chain(itr)` but restarts from the first rewriter after a successful application.
 - `IfElse(cond, rw1, rw2)`: Applies `rw1` if `cond` returns true, otherwise `rw2`.
 - `If(cond, rw)`: Equivalent to `IfElse(cond, rw, Empty())`.
-- `Prewalk(rw; threaded=false, thread_cutoff=100)`: Performs a pre-order traversal of an expression, applying `rw` at each step. `threaded` enables multithreading.
-- `Postwalk(rw; threaded=false, thread_cutoff=100)`: Post-order traversal, applying `rw`.
+- `Prewalk(rw)`: Performs a pre-order traversal of an expression, applying `rw` at each step. `threaded` enables multithreading.
+- `Postwalk(rw)`: Post-order traversal, applying `rw`.
 - `Fixpoint(rw)`: Repeatedly applies `rw` until no further changes occur.
-- `PassThrough(rw)`: If `rw(x)` returns `nothing`, `PassThrough` returns `x` instead.
+- `Rewrite(rw)`: If `rw(x)` returns `nothing`, `Rewrite` returns `x` instead.
