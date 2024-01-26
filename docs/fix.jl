@@ -11,8 +11,6 @@ using RewriteTools
 
 root = joinpath(@__DIR__, "..")
 
-DocMeta.setdocmeta!(Finch, :DocTestSetup, :(using RewriteTools); recursive=true)
-
-Literate.notebook(joinpath(@__DIR__, "src/interactive.jl"), joinpath(@__DIR__, "src"), credit = false)
+DocMeta.setdocmeta!(RewriteTools, :DocTestSetup, :(using RewriteTools); recursive=true)
 
 doctest(RewriteTools, fix=true)

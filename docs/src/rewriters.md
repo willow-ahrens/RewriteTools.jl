@@ -20,7 +20,7 @@ A rewriter is any callable object that takes an expression and returns either a 
 
 Rewriters can be combined into a chain, allowing multiple rules to be applied sequentially:
 
-```julia:composing1
+```jldoctest:composing1
 using RewriteTools
 using RewriteTools.Rewriters
 
@@ -33,13 +33,13 @@ csa(:(sin(x) + cos(x))^2)
 
 An important feature of `Chain` is that it returns the transformed expression instead of `nothing` if there are no changes:
 
-```julia:composing2
+```jldoctest:composing2
 Chain([@rule :call(+, :call(^, :call(sin, ~x), 2), :call(^, :call(cos, ~x), 2)) => 1])(:(sin(x) + cos(x))^2)
 ```
 
 The order of rules in a chain matters:
 
-```julia:composing3
+```jldoctest:composing3
 cas = Chain([pyid, sqexpand])
 cas(:(sin(x) + cos(x))^2)
 ```
@@ -48,13 +48,13 @@ In this case, applying the Pythagorean identity before expanding the square prev
 
 `RestartedChain` addresses the order issue by restarting the chain after each successful rule application:
 
-```julia:composing4
+```jldoctest:composing4
 rcas = RestartedChain([pyid, sqexpand])
 rcas(:(sin(x) + cos(x))^2)
 ```
 
 For continuous application of rules until no more changes are made, `Fixpoint` is used:
 
-```julia:composing5
+```jldoctest:composing5
 Fixpoint(cas)(:(sin(x) + cos(x))^2)
 ```
