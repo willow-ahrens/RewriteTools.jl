@@ -1,7 +1,18 @@
 # RewriteTools
 
-[![Build Status](https://github.com/willow-ahrens/RewriteTools.jl/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/willow-ahrens/RewriteTools.jl/actions/workflows/ci.yml?query=branch%3Amain)
-[![Coverage](https://codecov.io/gh/willow-ahrens/RewriteTools.jl/branch/main/graph/badge.svg)](https://codecov.io/gh/willow-ahrens/RewriteTools.jl)
+[docs]:https://willow-ahrens.github.io/RewriteTools.jl/stable
+[ddocs]:https://willow-ahrens.github.io/RewriteTools.jl/dev
+[ci]:https://github.com/willow-ahrens/RewriteTools.jl/actions/workflows/CI.yml?query=branch%3Amain
+[cov]:https://codecov.io/gh/willow-ahrens/RewriteTools.jl
+
+[docs_ico]:https://img.shields.io/badge/docs-stable-blue.svg
+[ddocs_ico]:https://img.shields.io/badge/docs-dev-blue.svg
+[ci_ico]:https://github.com/willow-ahrens/RewriteTools.jl/actions/workflows/CI.yml/badge.svg?branch=main
+[cov_ico]:https://codecov.io/gh/willow-ahrens/RewriteTools.jl/branch/main/graph/badge.svg
+
+| **Documentation**                             | **Build Status**                      |
+|:---------------------------------------------:|:-------------------------------------:|
+| [![][docs_ico]][docs] [![][ddocs_ico]][ddocs] | [![][ci_ico]][ci] [![][cov_ico]][cov] |
 
 RewriteTools.jl is a utility for term rewriting. RewriteTools.jl is a
 fork of [SymbolicUtils.jl](https://github.com/JuliaSymbolics/SymbolicUtils.jl)
@@ -10,16 +21,37 @@ rewriting. The semantics of rewriter objects is different, and new ``expanders''
 which implements
 [SyntaxInterface.jl](https://github.com/willow-ahrens/SyntaxInterface.jl).
 
+## Rule-based rewriting
 
-## Overview
+Rewrite rules match and transform an expression. A rule is written using the `@rule` macro and creates a callable `Rule` object.
 
-Functions are documented with docstrings; we give a few examples here.
+### A Simple Example
 
-```julia
-julia> using RewriteTools
+Here is a simple rewrite rule, that uses the formula for the double angle of the sine function:
 
-julia> r = @slots a b c @rule (a * b) + (a * c) => term(*, a, term(+, b, c))
-
-julia> r(term(+, term(*, 1, 2), term(*, 1, 3)))
-1 * (2 + 3)
+```julia:rewrite1
+using RewriteTools
+r1 = @rule :call(sin, :call(*, 2, ~x)) => :(2 * sin($x) * cos($x))
+r1(:(sin(2 * z)))
 ```
+
+The `@rule` macro pairs a matcher pattern with its consequent (`@rule matcher => consequent`). When an expression matches the matcher, it's rewritten to the consequent pattern. This rule signifies: if an expression fits the `sin(2x)` pattern, it's transformed to `2sin(x)cos(x)`.
+
+### Rewriting
+
+Rewriters are powerful tools in Julia for transforming expressions. They can be composed and chained together to create sophisticated transformations.
+
+### Overview of Composing Rewriters
+
+A rewriter is any callable object that takes an expression and returns either a new expression or `nothing`. `Nothing` indicates no applicable changes. The `RewriteTools.Rewriters` module provides several types of rewriters:
+
+- `Empty()`: Always returns `nothing`.
+- `Chain(itr)`: Chains an iterator of rewriters into a single rewriter. Each rewriter is applied in sequence. If a rewriter returns `nothing`, it's treated as a no-change.
+- `RestartedChain(itr)`: Similar to `Chain(itr)` but restarts from the first rewriter after a successful application.
+- `IfElse(cond, rw1, rw2)`: Applies `rw1` if `cond` returns true, otherwise `rw2`.
+- `If(cond, rw)`: Equivalent to `IfElse(cond, rw, Empty())`.
+- `Prewalk(rw)`: Performs a pre-order traversal of an expression, applying `rw` at each step. `threaded` enables multithreading.
+- `Postwalk(rw)`: Post-order traversal, applying `rw`.
+- `Fixpoint(rw)`: Repeatedly applies `rw` until no further changes occur.
+- `Prestep(rw)`: Recursively rewrites each node using `rw`. Only recurses if `rw` is not nothing.
+- `Rewrite(rw)`: If `rw(x)` returns `nothing`, `Rewrite` returns `x` instead.
