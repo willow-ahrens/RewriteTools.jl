@@ -1,3 +1,7 @@
+```@meta
+CurrentModule = RewriteTools
+```
+
 ## Rule-based rewriting
 
 Rewrite rules match and transform an expression. A rule is written using the `@rule` macro and creates a callable `Rule` object.
@@ -108,4 +112,11 @@ julia> sqexpand = @rule :call(:^, :call(:+, ~x, ~y), 2) => :((($x)^2 + ($y)^2 + 
 julia> sqexpand(:((sin(x) + cos(x))^2))
 :(sin(x) ^ 2 + cos(x) ^ 2 + 2 * sin(x) * cos(x))
 
+```
+
+### Docs
+
+```@docs
+@rule
+@capture
 ```

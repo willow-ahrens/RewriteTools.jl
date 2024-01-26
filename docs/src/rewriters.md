@@ -1,4 +1,8 @@
-## Composing Rewriters with Updated Approach
+```@meta
+CurrentModule = RewriteTools.Rewriters
+```
+
+## Composing Rewriters
 
 Rewriters are powerful tools for transforming expressions. They can be composed and chained together to create sophisticated transformations.
 
@@ -63,4 +67,15 @@ Fixpoint{Postwalk{Chain{Vector{RewriteTools.Rule{RewriteTools.Term}}}}}(Postwalk
 
 julia> cas3(:((sin(x) + cos(x))^4))
 :((sin(x) + cos(x)) * ((sin(x) + cos(x)) * ((sin(x) + cos(x)) * (sin(x) + cos(x)))))
+```
+
+```@docs
+IfElse{F, A, B}
+Rewrite
+NoRewrite
+Fixpoint{C}
+Prewalk{C}
+Postwalk{C}
+Chain{C}
+Prestep{C}
 ```
