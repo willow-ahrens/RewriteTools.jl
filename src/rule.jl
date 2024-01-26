@@ -55,7 +55,7 @@ function makeslot(s::Expr, keys)
     :(Slot($(QuoteNode(name)), $(esc(s.args[2]))))
 end
 
-function makepattern(expr, keys, slots, splat = false)
+function makepattern(expr, keys, splat = false)
     res = if expr isa Expr
         if expr.head === :call
             if expr.args[1] === :(~)
@@ -70,21 +70,17 @@ function makepattern(expr, keys, slots, splat = false)
                     return makeslot(expr.args[2], keys)
                 end
             else
-                :(term($(map(x->makepattern(x, keys, slots), expr.args)...); type=Any))
+                :(term($(map(x->makepattern(x, keys), expr.args)...); type=Any))
             end
         elseif expr.head === :...
-            makepattern(expr.args[1], keys, slots, true)
-        elseif expr.head == :(::) && expr.args[1] in slots
-            return splat ? makesegment(expr, keys) : makeslot(expr, keys)
+            makepattern(expr.args[1], keys, true)
         elseif expr.head === :ref
-            :(term(getindex, $(map(x->makepattern(x, keys, slots), expr.args)...); type=Any))
+            :(term(getindex, $(map(x->makepattern(x, keys), expr.args)...); type=Any))
         elseif expr.head === :$
             esc(expr.args[1])
         else
-            Expr(expr.head, makepattern.(expr.args, (keys,), (slots,))...)
+            Expr(expr.head, makepattern.(expr.args, (keys,))...)
         end
-    elseif expr in slots
-        return splat ? makesegment(expr, keys) : makeslot(expr, keys)
     else
         # treat as a literal
         esc(expr)
@@ -172,47 +168,8 @@ function rewrite_rhs(expr::Expr)
 end
 rewrite_rhs(expr) = expr
 
-function addslots(expr, slots)
-    if expr isa Expr
-        if expr.head === :macrocall && expr.args[1] in [Symbol("@rule"), Symbol("@capture"), Symbol("@slots")]
-            Expr(:macrocall, expr.args[1:2]..., slots..., expr.args[3:end]...)
-        else
-            Expr(expr.head, addslots.(expr.args, (slots,))...)
-        end
-    else
-        expr
-    end
-end
-
-
 """
-    @slots [SLOTS...] ex
-
-Declare SLOTS as slot variables for all `@rule` or `@capture` invocations in the expression `ex`.
-
-_Example:_
-
-```julia
-julia> @slots x y z a b c Chain([
-    (@rule x^2 + 2x*y + y^2 => (x + y)^2),
-    (@rule x^a * y^b => (x*y)^a * y^(b-a)),
-    (@rule +(x...) => sum(x)),
-])
-Chain(Rule{Term[...]))
-```
-
-See also: [`@rule`](@ref), [`@capture`](@ref)
-"""
-macro slots(args...)
-    length(args) >= 1 || ArgumentError("@slots requires at least one argument")
-    slots = args[1:end-1]
-    expr = args[end]
-
-    return esc(addslots(expr, slots))
-end
-
-"""
-    @rule [SLOTS...] LHS => RHS
+    @rule LHS => RHS
 
 Creates a `Rule` object. A rule object is callable, and takes an expression and
 rewrites it if it matches the LHS pattern to the RHS expression, returns
@@ -220,10 +177,6 @@ rewrites it if it matches the LHS pattern to the RHS expression, returns
 
 LHS can be any possibly nested function call expression where any of the arguments can
 optionally be a Slot (`~x`) or a Segment (`~x...`) (described below).
-
-SLOTS is an optional list of symbols to be interpted as slots or segments
-directly (without using `~`).  To declare slots for several rules at once, see
-the `@slots` macro.
 
 If an expression matches LHS entirely, then it is rewritten to the result of the
 expression RHS, whose local scope includes the slot matches as variables.
@@ -270,13 +223,6 @@ julia> r(sin(2a)^2 + cos(a)^2)
 # nothing
 ```
 
-A rule without `~`
-
-```julia
-julia> r = @slots x y z @rule x(y + z) => xy + xz
-x(y + z) => xy + xz
-```
-
 **Segment**:
 
 A Segment variable matches zero or more expressions in the function call.
@@ -293,14 +239,6 @@ julia> r = @rule ~x * +((~ys...)) => sum(map(y-> x * y, ys));
 julia> r(2 * (a+b+c))
 ((2 * a) + (2 * b) + (2 * c))
 ```
-
-A segment without `~`.
-
-```julia
-julia> r = @slots xs @rule min(xs...) => foldl(min, xs, Inf);
-
-julia> r(min(a, b, c))
-min(min(a, b), c)
 
 **Predicates**:
 
@@ -319,7 +257,7 @@ two_πs (generic function with 1 method)
 julia> two_πs(x) = false
 two_πs (generic function with 2 methods)
 
-julia> r = @slots x y z @rule sin(+(x..., y::two_πs, z...)) => sin(+(x..., z...))
+julia> r = @rule sin(+(~x..., ~y::two_πs, ~z...)) => sin(+(x..., z...))
 sin(+(x..., y::two_πs, z...)) => sin(+(x..., z...))
 
 julia> r(sin(a+3π))
@@ -353,18 +291,16 @@ Note that this is syntactic sugar and that it is the same as something like
 **Compatibility**:
 Segment variables may still be written as (`~~x`), and slot (`~x`) and segment (`~x...` or `~~x`) syntaxes on the RHS will still substitute the result of the matches.
 
-See also: [`@capture`](@ref), [`@slots`](@ref)
+See also: [`@capture`](@ref)
 """
-macro rule(args...)
-    length(args) >= 1 || ArgumentError("@rule requires at least one argument")
-    slots = args[1:end-1]
-    expr = macroexpand(__module__, args[end]) #TODO I would rather just expand the lhs, but we need to be able to traverse the rhs to handle ~ notation.
+macro rule(arg)
+    expr = macroexpand(__module__, arg) #TODO I would rather just expand the lhs, but we need to be able to traverse the rhs to handle ~ notation.
 
     @assert expr.head == :call && expr.args[1] == :(=>)
     lhs = expr.args[2]
     rhs = rewrite_rhs(expr.args[3])
     keys = Symbol[]
-    lhs_term = makepattern(lhs, keys, slots)
+    lhs_term = makepattern(lhs, keys)
     unique!(keys)
     bind = map(key-> :($(esc(key)) = getindex(__MATCHES__, $(QuoteNode(key)))), keys)
     quote
@@ -379,7 +315,7 @@ macro rule(args...)
 end
 
 """
-    @capture [SLOTS...] ex pattern
+    @capture ex pattern
 
 Uses a `Rule` object to capture an expression if it matches the `pattern`. Returns `true` and injects
 slot variable match results into the calling scope when the `pattern` matches, otherwise returns false. The
@@ -396,16 +332,13 @@ julia> if @capture ex (~x)^(~x)
 x = a
 ```
 
-See also: [`@rule`](@ref), [`@slots`](@ref)
+See also: [`@rule`](@ref)
 """
-macro capture(args...)
-    length(args) >= 2 || ArgumentError("@capture requires at least two arguments")
-    slots = args[1:end-2]
-    ex = args[end-1]
-    lhs = macroexpand(__module__, args[end])
+macro capture(ex, pattern)
+    lhs = macroexpand(__module__, pattern)
 
     keys = Symbol[]
-    lhs_term = makepattern(lhs, keys, slots)
+    lhs_term = makepattern(lhs, keys)
     unique!(keys)
     bind = Expr(:block, map(key-> :($(esc(key)) = getindex(__MATCHES__, $(QuoteNode(key)))), keys)...)
     quote
