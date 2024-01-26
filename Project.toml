@@ -7,6 +7,8 @@ version = "0.2.0"
 SyntaxInterface = "b33eeca9-aacb-4496-a840-e75f1646a4fb"
 
 [compat]
+
+AbstractTrees = "0.3, 0.4"
 SyntaxInterface = "0.2"
 julia = "1.1"
 
