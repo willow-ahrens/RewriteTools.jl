@@ -21,8 +21,10 @@ SyntaxInterface.operation(x::Term) = x.f
 
 SyntaxInterface.arguments(x::Term) = x.arguments
 
-Base.isequal(::Term, x) = false
-Base.isequal(x, ::Term) = false
+term_equal(::Term, x) = false
+term_equal(x, ::Term) = false
+term_equal(x, y) = isequal(x, y)
+term_equal(t1::Term, t2::Term) = isequal(t1, t2)
 function Base.isequal(t1::Term, t2::Term)
     t1 === t2 && return true
 
@@ -31,7 +33,7 @@ function Base.isequal(t1::Term, t2::Term)
 
     isequal(operation(t1), operation(t2)) &&
         length(a1) == length(a2) &&
-        all(isequal(l,r) for (l, r) in zip(a1, a2))
+        all(term_equal(l,r) for (l, r) in zip(a1, a2))
 end
 
 Base.:(==)(t1::Term, t2::Term) = isequal(t1, t2)
