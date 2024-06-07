@@ -30,12 +30,32 @@ end
 
     A rewriter which returns the original argument even if `rw` returns nothing
 """
-struct Rewrite
-    rw
+struct Rewrite{C}
+    rw::C
 end
 
 defaultrewrite(y, x) = y === nothing ? x : y
-(rw::Rewrite)(x) = defaultrewrite(rw.rw(x), x)
+(rw::Rewrite{C})(x) where {C} = defaultrewrite(rw.rw(x), x)
+
+function stable_map(::Type{T}, f::F, args...) where {T, F}
+    stable_res = Vector{T}(undef, length(first(args)))
+    unstable_res = Vector{Any}(undef, length(first(args)))
+    is_stable = true
+    for i in 1:length(first(args))
+        res = f(ntuple(n -> args[n][i], length(args))...)
+        if is_stable && res isa T
+            stable_res[i] = res
+        else
+            is_stable = false
+        end
+        unstable_res[i] = res
+    end
+    if is_stable
+        return stable_res
+    else
+        return unstable_res
+    end
+end
 
 """
     NoRewrite()
@@ -56,7 +76,7 @@ struct Fixpoint{C}
     rw::C
 end
 
-function (p::Fixpoint)(x)
+function (p::Fixpoint{C})(x) where {C}
     y = p.rw(x)
     if y !== nothing
         while y !== nothing && x !== y && !isequal(x, y)
@@ -80,21 +100,21 @@ struct Prewalk{C}
     rw::C
 end
 
-function (p::Prewalk{C})(x) where {C}
+function (p::Prewalk{C})(x::T) where {T, C}
     y = p.rw(x)
     if y !== nothing
         if istree(y)
             args = arguments(y)
-            new_args = map(p, args)
-            return similarterm(y, operation(y), map(defaultrewrite, new_args, args))
+            new_args = stable_map(Union{Nothing, T}, p, args)
+            return similarterm(y, operation(y), stable_map(T, defaultrewrite, new_args, args))
         else 
             return y
         end
     elseif istree(x)
         args = arguments(x)
-        new_args = map(p, args)
+        new_args = stable_map(Union{Nothing, T}, p, args)
         if !all(isnothing, new_args)
-            return similarterm(x, operation(x), map(defaultrewrite, new_args, args))
+            return similarterm(x, operation(x), stable_map(T, defaultrewrite, new_args, args))
         else
             return nothing
         end
@@ -114,14 +134,14 @@ struct Postwalk{C}
     rw::C
 end
 
-function (p::Postwalk{C})(x) where {C}
+function (p::Postwalk{C})(x::T) where {C, T}
     if istree(x)
         args = arguments(x)
-        new_args = map(p, args)
+        new_args = stable_map(Union{Nothing, T}, p, args)
         if all(isnothing, new_args)
             return p.rw(x)
         else
-            y = similarterm(x, operation(x), map(defaultrewrite, new_args, args))
+            y = similarterm(x, operation(x), stable_map(T, defaultrewrite, new_args, args))
             defaultrewrite(p.rw(y), y)
         end
     else 
@@ -163,12 +183,12 @@ struct Prestep{C}
     rw::C
 end
 
-function (p::Prestep{C})(x) where {C}
+function (p::Prestep{C})(x::T) where {T, C}
     y = p.rw(x)
     if y !== nothing
         if istree(y)
             y_args = arguments(y)
-            return similarterm(y, operation(y), map(y_arg->defaultrewrite(p(y_arg), y_arg), y_args))
+            return similarterm(y, operation(y), stable_map(T, y_arg->defaultrewrite(p(y_arg), y_arg), y_args))
         else
             return y
         end
