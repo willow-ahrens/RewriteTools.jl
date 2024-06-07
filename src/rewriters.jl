@@ -105,8 +105,7 @@ function (p::Prewalk{C})(x::T) where {T, C}
     if y !== nothing
         if istree(y)
             args = arguments(y)
-            new_args = stable_map(Union{Nothing, T}, p, args)
-            return similarterm(y, operation(y), stable_map(T, defaultrewrite, new_args, args))
+            return similarterm(y, operation(y), stable_map(T, arg->defaultrewrite(p(arg), arg), args))
         else 
             return y
         end
