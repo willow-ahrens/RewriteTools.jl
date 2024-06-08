@@ -10,7 +10,7 @@ using SyntaxInterface: is_operation, istree, operation, similarterm, arguments, 
 using Base.Iterators
 
 export IfElse
-export Rewrite, NoRewrite, Fixpoint, Prewalk, Postwalk, Chain, Prestep
+export Rewrite, NoRewrite, Fixpoint, Prewalk, Postwalk, Chain, Prestep, Memo
 
 """
     `IfElse(cond, rw1, rw2)`
@@ -30,12 +30,12 @@ end
 
     A rewriter which returns the original argument even if `rw` returns nothing
 """
-struct Rewrite{C}
-    rw::C
+struct Rewrite{R}
+    rw::R
 end
 
 defaultrewrite(y, x) = y === nothing ? x : y
-(rw::Rewrite{C})(x) where {C} = defaultrewrite(rw.rw(x), x)
+(rw::Rewrite{R})(x) where {R} = defaultrewrite(rw.rw(x), x)
 
 function stable_map(::Type{T}, f::F, args...) where {T, F}
     stable_res = Vector{T}(undef, length(first(args)))
@@ -72,11 +72,11 @@ struct NoRewrite end
     An rewriter which repeatedly applies `rw` to `x` until no changes are made. If
     the rewriter first returns `nothing`, returns `nothing`.
 """
-struct Fixpoint{C}
-    rw::C
+struct Fixpoint{R}
+    rw::R
 end
 
-function (p::Fixpoint{C})(x) where {C}
+function (p::Fixpoint{R})(x) where {R}
     y = p.rw(x)
     if y !== nothing
         while y !== nothing && x !== y && !isequal(x, y)
@@ -96,11 +96,11 @@ end
     the arguments of the resulting node. If all rewriters return `nothing`,
     returns `nothing`.
 """
-struct Prewalk{C}
-    rw::C
+struct Prewalk{R}
+    rw::R
 end
 
-function (p::Prewalk{C})(x::T) where {T, C}
+function (p::Prewalk{R})(x::T) where {T, R}
     y = p.rw(x)
     if y !== nothing
         if istree(y)
@@ -129,11 +129,11 @@ end
     `rw`, then rewrites the resulting node. If all rewriters return `nothing`,
     returns `nothing`.
 """
-struct Postwalk{C}
-    rw::C
+struct Postwalk{R}
+    rw::R
 end
 
-function (p::Postwalk{C})(x::T) where {C, T}
+function (p::Postwalk{R})(x::T) where {R, T}
     if istree(x)
         args = arguments(x)
         new_args = stable_map(Union{Nothing, T}, p, args)
@@ -154,11 +154,11 @@ end
     An rewriter which rewrites using each rewriter in `itr`. If all rewriters
     return `nothing`, return `nothing`.
 """
-struct Chain{C}
-    rws::C
+struct Chain{Rs}
+    rws::Rs
 end
 
-function (p::Chain{C})(x) where {C}
+function (p::Chain{Rs})(x) where {Rs}
     trigger = false
     for rw in p.rws
         y = rw(x)
@@ -178,11 +178,11 @@ end
     An rewriter which recursively rewrites each node using `rw`. If `rw` is
     nothing, it returns `nothing`, otherwise it recurses to the arguments.
 """
-struct Prestep{C}
-    rw::C
+struct Prestep{R}
+    rw::R
 end
 
-function (p::Prestep{C})(x::T) where {T, C}
+function (p::Prestep{R})(x::T) where {T, R}
     y = p.rw(x)
     if y !== nothing
         if istree(y)
@@ -195,5 +195,23 @@ function (p::Prestep{C})(x::T) where {T, C}
         return nothing
     end
 end
+
+"""
+    `Memo(rw, cache=Dict())`
+
+    An rewriter which caches the results of `rw` in `cache` and returns the
+    result.
+"""
+struct Memo{R, C}
+    rw::R
+    cache::C
+end
+
+function (p::Memo{R, C})(x::T) where {R, C, T}
+    get!(p.cache, x) do
+        p.rw(x)
+    end
+end
+
 
 end # module Rewriters
