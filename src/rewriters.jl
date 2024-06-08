@@ -207,6 +207,8 @@ struct Memo{R, C}
     cache::C
 end
 
+Memo(rw) = Memo(rw, Dict())
+
 function (p::Memo{R, C})(x::T) where {R, C, T}
     get!(p.cache, x) do
         p.rw(x)
