@@ -200,7 +200,7 @@ julia> r(sin(1+a))
 cos((1 + a))
 ```
 
-A rule with 2 segment variables
+A rule with 2 slot variables
 
 ```julia
 julia> r = @rule sin(~x + ~y) => sin(x)*cos(y) + cos(x)*sin(y)
@@ -287,6 +287,38 @@ true
 
 Note that this is syntactic sugar and that it is the same as something like
 `@rule ~x => f(x) ? x : nothing`.
+
+**Advanced Usage**:
+
+For more complex usage with segments where there might be more than one match,
+the engine follows DFS traversal and applies the rule to the last match that occurs.
+For a hypothetical rule `@rule Plan(..., A, ..., B, ..., C, ...)` it matches to the
+last `A` that conforms to the `A` rule, knowing that the whole rule matches, last `B`
+that conforms with `A` match and to the `B` rule, and so on. Here's an example you
+can run and experiment with:
+
+```
+julia> struct Foo
+           children::Vector{Any}
+       end
+
+julia> function (::Type{Foo})(args...)
+           Foo(Any[args...])
+       end
+
+julia> struct Bar
+           val1::Any
+           val2::Any
+       end
+
+julia> r = @rule Foo(~a1..., Bar(~b, ~c), ~a2..., Bar(~d, Bar(~e, ~b)), ~a3...) => (c, d);
+
+julia> data = term(Foo, 1, term(Bar, "a1", "a2"), term(Bar, "b1", "b2"), 2, term(Bar, "c1", term(Bar, "c2", "b1")), term(Bar, "d1", term(Bar, "d2", "a1")), 3)
+Foo(1, Bar(a1, a2), Bar(b1, b2), 2, Bar(c1, Bar(c2, b1)), Bar(d1, Bar(d2, a1)), 3)
+
+julia> r(data)
+("b2", "c1")
+```
 
 **Compatibility**:
 Segment variables may still be written as (`~~x`), and slot (`~x`) and segment (`~x...` or `~~x`) syntaxes on the RHS will still substitute the result of the matches.
